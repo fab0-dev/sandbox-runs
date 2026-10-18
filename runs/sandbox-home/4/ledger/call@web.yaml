@@ -1,0 +1,19 @@
+factory: web
+pipeline: delivery
+unit: web
+item: fab0-dev/sandbox-web#3
+project: sandbox-web
+run: '3'
+bindings:
+  spec: spec
+  upstream: contract
+formats:
+  feedback:
+    artifact: web-feedback
+    sections:
+    - Delivered
+    - Deviations
+    - Open questions
+acknowledge: auto
+actor: eugenefurs
+at: '2026-10-18T17:48:55Z'
