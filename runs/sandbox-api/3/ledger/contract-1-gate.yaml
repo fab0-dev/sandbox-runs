@@ -1,0 +1,92 @@
+step: contract
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/contract
+base:
+  branch: fab0/3/base
+  sha: 6e2b3f3e05c357b3b4b067656c2e41b03c3be86d
+model: opus
+gate:
+  type: auto
+  merge: auto
+  into: fab0/3/base
+  agent: reviewer
+  decision: reject
+summary: The contract covers every interface in the spec (Pay order, Order payment
+  status, List payments, Test cards) and maps onto D1-D11. Only contract.yaml changed,
+  it parses as YAML, all seven test card numbers pass the Luhn check, and there is
+  no code or tests to run yet (`python3 -m unittest discover -s tests -t .` fails
+  only because tests/ does not exist).; One gap blocks the web team. sandbox-web is
+  'plain HTML and JavaScript, no build step' (its README), so pay_order and order_payment_status
+  will be called from a browser on a different origin. The contract says nothing about
+  CORS. It also sends unsupported methods (OPTIONS among them) to 405. A POST with
+  Content-Type application/json and an Idempotency-Key header sets off a CORS preflight.
+  As written, the browser would block every pay_order call, and the checkout could
+  not read the Idempotency-Replayed header.
+verdict:
+  decision: reject
+  reasons:
+  - The contract covers every interface in the spec (Pay order, Order payment status,
+    List payments, Test cards) and maps onto D1-D11. Only contract.yaml changed, it
+    parses as YAML, all seven test card numbers pass the Luhn check, and there is
+    no code or tests to run yet (`python3 -m unittest discover -s tests -t .` fails
+    only because tests/ does not exist).
+  - One gap blocks the web team. sandbox-web is 'plain HTML and JavaScript, no build
+    step' (its README), so pay_order and order_payment_status will be called from
+    a browser on a different origin. The contract says nothing about CORS. It also
+    sends unsupported methods (OPTIONS among them) to 405. A POST with Content-Type
+    application/json and an Idempotency-Key header sets off a CORS preflight. As written,
+    the browser would block every pay_order call, and the checkout could not read
+    the Idempotency-Replayed header.
+  findings:
+  - check: cross-team interface
+    message: 'The contract must define CORS for the browser checkout: answer OPTIONS
+      preflight on /payments and /orders/{order_reference}/payments (for example 204),
+      and send Access-Control-Allow-Origin, Access-Control-Allow-Methods (GET, POST),
+      Access-Control-Allow-Headers (Content-Type, Idempotency-Key) and Access-Control-Expose-Headers
+      (Idempotency-Replayed). Then fix the note that sends every unsupported method
+      to 405, because otherwise sandbox-web cannot call pay_order or order_payment_status.'
+    location: contract.yaml:160
+  - check: cross-team interface
+    message: The transport note puts host and port in a README that only task T3 writes,
+      so the web team has no default base URL now; the contract should state the default
+      host and port (and the CORS origin policy) itself.
+    location: contract.yaml:149
+  - check: consistency
+    message: 'The refusal description says every refusal shares one body shape { error:
+      { code, message, fields } }, but order_already_paid adds error.order_reference;
+      the shared shape should allow it, or the extra field should go (minor).'
+    location: contract.yaml:54
+  - check: completeness
+    message: 'The precedence among refusals is only partly defined: validation_failed
+      comes before order_already_paid, but nothing says which wins when invalid_request,
+      invalid_amount and validation_failed apply at once. The contract also does not
+      say whether a refusal is replayed for a repeated Idempotency-Key, given that
+      ''nothing was recorded'' (minor).'
+    location: contract.yaml:158
+  - check: spec intent
+    message: list_payments caps limit at 500 with no cursor or offset, so once more
+      payments exist the shop cannot list the older ones, which works against the
+      Intent's 'the shop can see what happened to every payment'; consider paging
+      or note the limit as a deliberate choice (minor).
+    location: contract.yaml:114
+  - check: D10
+    message: The 'same body' check for Idempotency-Key means the service has to keep
+      something derived from the request body, card number included; the notes should
+      say that only a keyed or salted digest without the card number and security
+      code is kept, so D10 holds (minor).
+    location: contract.yaml:16
+  details:
+    files_changed:
+    - contract.yaml
+    extra_files: []
+    checks_run:
+    - git diff --name-only origin/fab0/3/base...fab0/3/contract
+    - 'yaml.safe_load(contract.yaml): 4 operations, request and response are mappings'
+    - 'Luhn check on all test_cards numbers: all pass'
+    - 'python3 -m unittest discover -s tests -t .: no tests directory yet (expected
+      for the contract step)'
+    contract_path: /Users/zhen/Work/Fab0/sandbox-api/.git/fab0/worktrees/3/contract/contract.yaml
+started: '2026-10-18T18:01:04Z'
+ended: '2026-10-18T18:03:10Z'
