@@ -1,0 +1,94 @@
+step: contract
+attempt: 2
+executor: agent
+actor: eugenefurs
+branch: fab0/3/contract
+base:
+  branch: fab0/3/base
+  sha: 6e2b3f3e05c357b3b4b067656c2e41b03c3be86d
+model: opus
+gate:
+  type: auto
+  merge: auto
+  into: fab0/3/base
+  agent: reviewer
+  decision: approve
+summary: 'contract.yaml covers all four spec interfaces. Pay order (POST /payments)
+  takes the order reference, amount, currency and card fields. Its answer tells three
+  cases apart: succeeded (201), declined (201, with decline_reason and message) and
+  refused (4xx with error.code, naming the fields for validation_failed). It refuses
+  invalid cards, non-positive amounts and already-paid orders. Order payment status
+  (GET /orders/{order_reference}/payments) returns paid plus the attempts, newest
+  first. List payments (GET /payments) is newest first and can be narrowed by outcome.
+  Test cards are documented in docs/test-cards.md, which is a T1 file.; The contract
+  meets the spec''s Done-when points as it should. D3 has all five decline reason
+  codes with fixed customer messages. D4 has the field codes required, invalid_number
+  (Luhn), expired and invalid_length. D6 is order_already_paid. D7 is covered by per-order
+  serialisation, the Idempotency-Key and the checkout disabling its button. D8 and
+  D10 are covered: only brand and last4 are kept, and the idempotency digest is computed
+  without the full number or the security code. D11 has a test card for each outcome,
+  and all seven numbers pass the Luhn check (I ran it).; The contract agrees with
+  the task list. T1 covers brand-dependent security code length and the test cards
+  doc, T2 covers amounts in minor units and UTC times, and T3 covers the entry point
+  taking --host and --port and the README.; Attempt 2 deals with the earlier findings:
+  CORS preflight and the exposed header, the default base URL, a defined refusal shape
+  with optional members, a fixed refusal order with replay before the already-paid
+  check, cursor paging for list_payments, and the D10-safe idempotency digest.; Scope
+  is clean. `git diff --name-only origin/fab0/3/base...fab0/3/contract` lists only
+  contract.yaml, and `git diff --check` is clean. The YAML parses: it has `operations`
+  and `notes`, four operations, and every request and response is a mapping. There
+  is no code yet, so there were no tests to run. jsonschema is not installed, so I
+  could not validate the contract against a schema, as the producer also reported.'
+verdict:
+  decision: approve
+  reasons:
+  - 'contract.yaml covers all four spec interfaces. Pay order (POST /payments) takes
+    the order reference, amount, currency and card fields. Its answer tells three
+    cases apart: succeeded (201), declined (201, with decline_reason and message)
+    and refused (4xx with error.code, naming the fields for validation_failed). It
+    refuses invalid cards, non-positive amounts and already-paid orders. Order payment
+    status (GET /orders/{order_reference}/payments) returns paid plus the attempts,
+    newest first. List payments (GET /payments) is newest first and can be narrowed
+    by outcome. Test cards are documented in docs/test-cards.md, which is a T1 file.'
+  - 'The contract meets the spec''s Done-when points as it should. D3 has all five
+    decline reason codes with fixed customer messages. D4 has the field codes required,
+    invalid_number (Luhn), expired and invalid_length. D6 is order_already_paid. D7
+    is covered by per-order serialisation, the Idempotency-Key and the checkout disabling
+    its button. D8 and D10 are covered: only brand and last4 are kept, and the idempotency
+    digest is computed without the full number or the security code. D11 has a test
+    card for each outcome, and all seven numbers pass the Luhn check (I ran it).'
+  - The contract agrees with the task list. T1 covers brand-dependent security code
+    length and the test cards doc, T2 covers amounts in minor units and UTC times,
+    and T3 covers the entry point taking --host and --port and the README.
+  - 'Attempt 2 deals with the earlier findings: CORS preflight and the exposed header,
+    the default base URL, a defined refusal shape with optional members, a fixed refusal
+    order with replay before the already-paid check, cursor paging for list_payments,
+    and the D10-safe idempotency digest.'
+  - 'Scope is clean. `git diff --name-only origin/fab0/3/base...fab0/3/contract` lists
+    only contract.yaml, and `git diff --check` is clean. The YAML parses: it has `operations`
+    and `notes`, four operations, and every request and response is a mapping. There
+    is no code yet, so there were no tests to run. jsonschema is not installed, so
+    I could not validate the contract against a schema, as the producer also reported.'
+  findings:
+  - check: cors
+    message: 'The preflight advertises `Access-Control-Allow-Methods: GET, POST, OPTIONS`
+      for /orders/{order_reference}/payments too, although that path supports only
+      GET and a POST there is a 405. This is harmless, but T3 could send per-path
+      methods.'
+    location: contract.yaml:159
+  - check: interface completeness
+    message: The contract does not say which refusal (presumably invalid_request)
+      answers an Idempotency-Key that is empty or longer than 255 characters. T3 has
+      to pick one.
+    location: contract.yaml:12
+  - check: interface completeness
+    message: 'The contract does not say what happens when `card` is missing or is
+      not an object: either validation_failed listing every field as required, or
+      invalid_request. T3 and the web team should agree on one.'
+    location: contract.yaml:24
+  - check: style
+    message: The YAML anchor `&payment` is defined but never used, because the declined
+      branch describes the shape in words. This is harmless.
+    location: contract.yaml:34
+started: '2026-10-18T18:05:33Z'
+ended: '2026-10-18T18:07:25Z'
