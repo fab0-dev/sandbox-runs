@@ -1,0 +1,55 @@
+step: contract
+attempt: 2
+executor: agent
+actor: eugenefurs
+branch: fab0/3/contract
+model: sonnet
+base:
+  branch: fab0/3/base
+  sha: 6e2b3f3e05c357b3b4b067656c2e41b03c3be86d
+inputs:
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+  tasks: sha256:42dc3705783511953ff2985daf736469228a6baa588aa5725e99dc9830b2696b
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+rework:
+- rejected
+claims:
+- home:contract.yaml
+gate:
+  type: auto
+summary: "I reworked contract.yaml to cover every finding. It parses as YAML with\
+  \ four operations, and the request and response of each are objects. I could not\
+  \ run `record` or validate against the JSON schema because jsonschema is not installed.\
+  \ I changed no other file.\n\nFixes, by finding:\n- **CORS (blocking):** a new `cors`\
+  \ note covers it.\n  - Origin policy is any origin (`Access-Control-Allow-Origin:\
+  \ *`), with no credentials. The reason given is that this Story has no authentication.\n\
+  \  - OPTIONS on `/payments` and `/orders/{order_reference}/payments` answers `204`\
+  \ with Allow-Methods `GET, POST, OPTIONS`, Allow-Headers `Content-Type, Idempotency-Key`\
+  \ and Max-Age 600.\n  - Every response, errors included, carries Allow-Origin and\
+  \ `Access-Control-Expose-Headers: Idempotency-Replayed`.\n  - The 404/405 note now\
+  \ says OPTIONS on a known path is a preflight and never a 405. A 405 carries an\
+  \ `Allow` header.\n- **Base URL:** the transport note now gives the default `http://127.0.0.1:8000`.\
+  \ T3's entry point takes `--host` and `--port`, and the README repeats the defaults.\n\
+  - **Refusal shape:** it now allows two optional members, `fields` (only on validation_failed)\
+  \ and `order_reference` (only on order_already_paid).\n- **Refusal precedence:**\
+  \ it is fixed as invalid_request, invalid_amount, validation_failed, idempotency_key_reused,\
+  \ order_already_paid.\n  - A repeated key with the same body is replayed before\
+  \ the already-paid check, so a replayed success is a 200 and not a 409.\n  - Refusals\
+  \ are never remembered or replayed under an Idempotency-Key.\n- **list_payments\
+  \ paging:** I added an opaque `cursor` query parameter and a `next_cursor` in the\
+  \ response (null at the end), so older payments can be reached. order_payment_status\
+  \ stays unpaged on purpose, and the contract says so.\n- **D10 and the idempotency\
+  \ check:** the notes now say the service keeps only a keyed digest (HMAC-SHA-256\
+  \ with a secret random key). It covers order_reference, amount, currency, cardholder\
+  \ name, brand, last four digits and expiry. It excludes the full card number and\
+  \ the security code, and is never returned. One consequence is that two requests\
+  \ differing only in the middle digits or the security code count as the same body.\
+  \ T3 should build it that way.\n\nContract file: contract.yaml"
+outputs:
+  contract: sha256:e6b5349a984354ff92acf92f72610d67cd38ecc6e4a4b570a38de4b3d5814c7f
+verify:
+  contract: pass
+started: '2026-10-18T18:03:27Z'
+ended: '2026-10-18T18:05:07Z'
+heads:
+  home: 8dd6e3c294f66994f220087a60015c46ca02de4d
