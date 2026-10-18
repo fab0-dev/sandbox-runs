@@ -1,0 +1,76 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/implement-T3
+base:
+  branch: fab0/3/base
+  sha: c2bdb0d27c681e19d19e7fbeccfba1421fc29f65
+unit: T3
+model: opus
+gate:
+  type: auto
+  merge: auto
+  into: fab0/3/base
+  agent: reviewer
+  decision: approve
+summary: 'The change touches only the six files T3 lists: README.md, checkout.html,
+  index.html, src/checkout.js, styles.css and tests/checkout.test.js. All six are
+  new or added to, and no T1 or T2 file is modified.; It covers everything in the
+  T3 title. The order comes from the URL and is validated. The order''s payment status
+  loads first, and a paid order shows as paid with no form. The submit lock is set
+  before any await, and the fieldset and button are disabled while processing (D7).
+  A success shows paid, the amount charged from the returned payment, and brand with
+  last four digits (D2). A decline shows the service''s message as sent, on the same
+  page, with data-reason set and the form ready to retry (D3, D5). Field errors from
+  validateCard and from the service''s validation_failed land in the same places (D4).
+  order_already_paid shows the order as paid with the service''s message (D6). The
+  card number and security code are cleared in a finally after every attempt that
+  was sent.; It matches the upstream contract through the T2 client. It tells succeeded,
+  declined, refused and error apart, shows the message rather than hard-coding the
+  decline wording, and keys styling on decline_reason. After a failure with no usable
+  answer it reads order_payment_status before allowing another submit, as other_errors
+  asks. Each submit gets a fresh Idempotency-Key.; `npm test` in the implement-T3
+  worktree gives 81 pass, 0 fail, 0 skipped.'
+verdict:
+  decision: approve
+  reasons:
+  - 'The change touches only the six files T3 lists: README.md, checkout.html, index.html,
+    src/checkout.js, styles.css and tests/checkout.test.js. All six are new or added
+    to, and no T1 or T2 file is modified.'
+  - It covers everything in the T3 title. The order comes from the URL and is validated.
+    The order's payment status loads first, and a paid order shows as paid with no
+    form. The submit lock is set before any await, and the fieldset and button are
+    disabled while processing (D7). A success shows paid, the amount charged from
+    the returned payment, and brand with last four digits (D2). A decline shows the
+    service's message as sent, on the same page, with data-reason set and the form
+    ready to retry (D3, D5). Field errors from validateCard and from the service's
+    validation_failed land in the same places (D4). order_already_paid shows the order
+    as paid with the service's message (D6). The card number and security code are
+    cleared in a finally after every attempt that was sent.
+  - It matches the upstream contract through the T2 client. It tells succeeded, declined,
+    refused and error apart, shows the message rather than hard-coding the decline
+    wording, and keys styling on decline_reason. After a failure with no usable answer
+    it reads order_payment_status before allowing another submit, as other_errors
+    asks. Each submit gets a fresh Idempotency-Key.
+  - '`npm test` in the implement-T3 worktree gives 81 pass, 0 fail, 0 skipped.'
+  findings:
+  - check: spec
+    message: When a local check blocks the submit, the card number and security code
+      are not cleared. The title says 'after each attempt', and nothing is sent in
+      this case, so this is a reasonable reading. It is documented in the README,
+      and a person can confirm it.
+    location: src/checkout.js:207
+  - check: tests
+    message: The page binding is tested against a stand-in DOM, not a real browser
+      or the real service, so this change has not been run end to end. The producer
+      says so.
+    location: tests/checkout.test.js:457
+  - check: contract
+    message: If Pay order returns an error and the status read then says the order
+      is unpaid, the next submit uses a new Idempotency-Key, not the original one.
+      The service serialises attempts per order, so this is safe, but it does not
+      reuse keys on resend as the contract suggests.
+    location: src/checkout.js:251
+started: '2026-10-18T18:30:30Z'
+ended: '2026-10-18T18:32:50Z'
