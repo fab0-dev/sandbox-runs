@@ -1,0 +1,2 @@
+contract: true
+why: "The web checkout (sandbox-web) calls this service's Pay order and Order payment status, and the shop calls List payments and Order payment status, so the service publishes the contract they build against."
