@@ -1,0 +1,2 @@
+contract: false
+why: "The web checkout offers nothing to other teams; per the spec's Interfaces it only calls the service's Pay order and Order payment status."

@@ -1,0 +1,88 @@
+step: plan
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/plan
+model: opus
+base:
+  branch: fab0/3/base
+  sha: 64a2dddbb40c3d957262cfbb2738208ba1bec185
+inputs:
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+gate:
+  type: human
+summary: 'I planned three tasks for the web checkout in sandbox-web. The repository
+  has no app code yet, only the README, which says plain HTML and JavaScript with
+  no build step. scope.yaml sets contract: false, because the web checkout offers
+  no interface to other teams and only calls the service''s Pay order and Order payment
+  status.
+
+
+  The tasks:
+
+  - T1: checks the card details in the browser before any payment is tried, and gives
+  a message for each wrong field (D4). It checks for missing fields, the card number''s
+  check digit, an expiry date in the past, and the security code''s length.
+
+  - T2: an API client for Pay order and Order payment status, plus a config file for
+  the service''s base URL. It tells three answers apart: succeeded, declined with
+  a reason and message, and refused with the fields or the reason.
+
+  - T3: the checkout page. It depends on T1 and T2.
+
+
+  T1 and T2 change different files, so they can run in parallel. T2 builds against
+  the service team''s contract once it exists, and until then against the spec''s
+  Interfaces.
+
+
+  What T3''s checkout page does:
+
+  - It loads the order''s payment status first. If the order is already paid, it shows
+  that instead of the form.
+
+  - The submit button is locked while a payment is processing, so a double click gives
+  at most one attempt (D7).
+
+  - It shows that the order is paid and the amount charged (D2).
+
+  - It shows the service''s decline message as is and lets the customer try again
+  on the same page (D3, D5).
+
+  - It shows field errors, from its own checks or from the service, and the service''s
+  refusal when the order is already paid (D6).
+
+  - It clears the card number and security code after each attempt (D10).
+
+
+  Choices I made where the spec leaves things open:
+
+  1. The checkout gets the order reference, amount and currency from the page URL
+  (for example ?order=...&amount=...&currency=...), because there is no cart or order
+  code here yet (Open questions 2 and 4).
+
+  2. Unit tests use Node''s built-in test runner. T1 adds a minimal package.json for
+  the test script and nothing more, so there is still no build step.
+
+  3. The service is the final judge of card details. The browser checks are there
+  only to catch mistakes early.
+
+  4. The shop''s listing (List payments) and the test cards documentation (D11) belong
+  to the service, so this repository builds nothing for them. T3''s README only points
+  to the service''s test cards and says how to run the page against the service.
+
+
+  Files written:
+
+  - /Users/zhen/Work/Fab0/sandbox-web/.git/fab0/out/3/plan-1/tasks.yaml
+
+  - /Users/zhen/Work/Fab0/sandbox-web/.git/fab0/out/3/plan-1/scope.yaml'
+outputs:
+  tasks: sha256:1e56bce73e127a530cf09bd16bc6b34dd0239c4aaf8a3fbf38ebaa6c3521538a
+  scope: sha256:13d45d2873e867c5716974d66262affe180642bf66723dce4f96dd3fb11cd269
+verify:
+  tasks: pass
+  scope: pass
+started: '2026-10-18T17:57:19Z'
+ended: '2026-10-18T17:58:31Z'
