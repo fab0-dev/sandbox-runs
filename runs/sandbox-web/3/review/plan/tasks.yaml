@@ -1,0 +1,22 @@
+- id: T1
+  title: "Card details validation in the browser: required fields, card number check digit (Luhn), expiry not in the past, security code length; returns an error for each field (D4)"
+  files:
+    - src/card-validation.js
+    - tests/card-validation.test.js
+    - package.json
+- id: T2
+  title: "Payments API client for the service contract: Pay order and Order payment status; tells apart succeeded, declined (reason and message) and refused (invalid fields, already paid, bad amount); base URL in config; sends no card data anywhere else and keeps none (D10)"
+  files:
+    - src/config.js
+    - src/payments-api.js
+    - tests/payments-api.test.js
+- id: T3
+  title: "Checkout payment step: card form for the order taken from the URL (order, amount, currency); loads the order's payment status first and shows it as paid if it is; submit is locked while a payment is processing (D7); shows paid and amount charged (D2), the decline message with retry on the same page (D3, D5), field errors from local checks or the service (D4) and the already-paid refusal (D6); clears the card number and security code after each attempt"
+  files:
+    - index.html
+    - checkout.html
+    - src/checkout.js
+    - styles.css
+    - tests/checkout.test.js
+    - README.md
+  depends_on: [T1, T2]
