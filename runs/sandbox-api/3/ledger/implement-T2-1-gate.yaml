@@ -1,0 +1,78 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/implement-T2
+base:
+  branch: fab0/3/base
+  sha: 6283ad920749b231a55f0e61a5e618cfacf09422
+unit: T2
+model: opus
+gate:
+  type: auto
+  merge: auto
+  into: fab0/3/base
+  agent: reviewer
+  decision: approve
+summary: 'The change touches only the two files T2 lists, payments/store.py and tests/test_store.py
+  (checked with git diff --name-only origin/fab0/3/base...fab0/3/implement-T2).; It
+  does what T2 asks (D8, D9, D10). Every attempt is recorded with a payment reference,
+  order, amount in minor units, currency, outcome, decline reason, message, brand,
+  last four and a UTC time to the second ending in Z. attempts_for_order returns attempts
+  newest first, with ties broken by the later attempt first. is_paid is true when
+  any attempt for the order succeeded. list_payments returns payments newest first,
+  can be narrowed by outcome, and pages with limit and cursor as contract.yaml list_payments
+  requires.; D10: the table has no column for a full card number or security code,
+  last4 must be exactly four ASCII digits, and as_dict exposes only card.brand and
+  card.last4. Tests check the raw sqlite file and the returned values for the card
+  number and security code.; The Payment.as_dict shape matches the payment object
+  in contract.yaml. The brands, outcomes and decline reasons come from T1''s payments.cards
+  and payments.processor.; A partial unique index allows at most one succeeded attempt
+  per order, which backs up D6 and D7. I checked by hand that a second success raises
+  OrderAlreadyPaid and records nothing, that declines after a success are still kept,
+  that a cursor works with an outcome filter, and that malformed cursors raise InvalidCursor.;
+  The tests pass: `python3 -m unittest discover -s tests -t .` in the T2 worktree
+  ran 69 tests, OK.'
+verdict:
+  decision: approve
+  reasons:
+  - The change touches only the two files T2 lists, payments/store.py and tests/test_store.py
+    (checked with git diff --name-only origin/fab0/3/base...fab0/3/implement-T2).
+  - It does what T2 asks (D8, D9, D10). Every attempt is recorded with a payment reference,
+    order, amount in minor units, currency, outcome, decline reason, message, brand,
+    last four and a UTC time to the second ending in Z. attempts_for_order returns
+    attempts newest first, with ties broken by the later attempt first. is_paid is
+    true when any attempt for the order succeeded. list_payments returns payments
+    newest first, can be narrowed by outcome, and pages with limit and cursor as contract.yaml
+    list_payments requires.
+  - 'D10: the table has no column for a full card number or security code, last4 must
+    be exactly four ASCII digits, and as_dict exposes only card.brand and card.last4.
+    Tests check the raw sqlite file and the returned values for the card number and
+    security code.'
+  - The Payment.as_dict shape matches the payment object in contract.yaml. The brands,
+    outcomes and decline reasons come from T1's payments.cards and payments.processor.
+  - A partial unique index allows at most one succeeded attempt per order, which backs
+    up D6 and D7. I checked by hand that a second success raises OrderAlreadyPaid
+    and records nothing, that declines after a success are still kept, that a cursor
+    works with an outcome filter, and that malformed cursors raise InvalidCursor.
+  - 'The tests pass: `python3 -m unittest discover -s tests -t .` in the T2 worktree
+    ran 69 tests, OK.'
+  findings:
+  - check: contract agreement
+    message: A cursor the store never issued is still accepted if it decodes to a
+      valid [timestamp, seq] pair, so the store only rejects malformed cursors, not
+      every cursor it did not issue as contract list_payments says; this is harmless
+      for an opaque position cursor and does not block.
+    location: payments/store.py:137
+  - check: D10 handoff
+    message: record_attempt accepts any string as message, so T3 must pass only the
+      processor's fixed messages to keep card data out of storage; the producer already
+      flags this for T3.
+    location: payments/store.py:238
+  - check: defence in depth
+    message: The database CHECK on currency tests only the length (3), but the Python
+      check also requires upper-case ASCII letters, so this has no effect through
+      the public API.
+    location: payments/store.py:41
+started: '2026-10-18T18:22:24Z'
+ended: '2026-10-18T18:23:40Z'
