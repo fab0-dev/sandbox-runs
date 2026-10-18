@@ -1,0 +1,75 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/implement-T3
+base:
+  branch: fab0/3/base
+  sha: 1568998dffe9aa5cccabbfb8d556b4c313ffa121
+unit: T3
+model: opus
+gate:
+  type: auto
+  merge: auto
+  into: fab0/3/base
+  agent: reviewer
+  decision: approve
+summary: 'The change implements Pay order (POST /payments), Order payment status (GET
+  /orders/{order_reference}/payments) and List payments (GET /payments) as contract.yaml
+  specifies. That covers the status codes, the shared error body, the refusal order
+  (invalid_request, invalid_amount, validation_failed, idempotency_key_reused, order_already_paid),
+  replay by Idempotency-Key before the already-paid check with a 200 and Idempotency-Replayed:
+  true, per-order serialisation backed by the store''s one-success-per-order index,
+  declines returned as 201, paging, CORS headers and the 204 preflight.; Scope: git
+  diff --name-only origin/fab0/3/base...fab0/3/implement-T3 lists exactly the six
+  T3 files (README.md, payments/__main__.py, payments/api.py, payments/service.py,
+  tests/test_api.py, tests/test_service.py). No other files were touched and the worktree
+  is clean.; Tests: `python3 -m unittest discover -s tests -t .` ran 128 tests OK,
+  3 runs in a row, under Python 3.13.0. An in-process smoke run of the HTTP server
+  matched the contract. In that run, a decline followed by a success marked the order
+  paid. A same-key replay returned 200 with the replay header. A new key on a paid
+  order got 409 with order_reference. Validation listed every invalid field in order.
+  Bad amount and bad currency got 422 and 400. DELETE got 405 with an Allow header,
+  an unknown path got 404 and OPTIONS got 204 with the preflight headers. The sqlite
+  rows held only brand and last4.'
+verdict:
+  decision: approve
+  reasons:
+  - 'The change implements Pay order (POST /payments), Order payment status (GET /orders/{order_reference}/payments)
+    and List payments (GET /payments) as contract.yaml specifies. That covers the
+    status codes, the shared error body, the refusal order (invalid_request, invalid_amount,
+    validation_failed, idempotency_key_reused, order_already_paid), replay by Idempotency-Key
+    before the already-paid check with a 200 and Idempotency-Replayed: true, per-order
+    serialisation backed by the store''s one-success-per-order index, declines returned
+    as 201, paging, CORS headers and the 204 preflight.'
+  - 'Scope: git diff --name-only origin/fab0/3/base...fab0/3/implement-T3 lists exactly
+    the six T3 files (README.md, payments/__main__.py, payments/api.py, payments/service.py,
+    tests/test_api.py, tests/test_service.py). No other files were touched and the
+    worktree is clean.'
+  - 'Tests: `python3 -m unittest discover -s tests -t .` ran 128 tests OK, 3 runs
+    in a row, under Python 3.13.0. An in-process smoke run of the HTTP server matched
+    the contract. In that run, a decline followed by a success marked the order paid.
+    A same-key replay returned 200 with the replay header. A new key on a paid order
+    got 409 with order_reference. Validation listed every invalid field in order.
+    Bad amount and bad currency got 422 and 400. DELETE got 405 with an Allow header,
+    an unknown path got 404 and OPTIONS got 204 with the preflight headers. The sqlite
+    rows held only brand and last4.'
+  findings:
+  - check: contract
+    message: A method http.server has no handler for (for example TRACE) gets a 405
+      without the Allow header the contract requires on 405s. On an unknown path the
+      same request gets 405 where the contract expects 404.
+    location: payments/api.py:102
+  - check: contract
+    message: The idempotency digest uses expiry_year as sent, so a resend with the
+      same key that writes 26 instead of 2026 is refused as idempotency_key_reused,
+      not replayed. The contract arguably allows this, but normalising the year first
+      would be safer.
+    location: payments/service.py:230
+  - check: scope
+    message: The default database file payments.db is not in .gitignore, so running
+      the server from the repo root leaves an untracked file. .gitignore is outside
+      T3's files, so another task would have to fix it.
+    location: .gitignore:1
+started: '2026-10-18T18:29:47Z'
+ended: '2026-10-18T18:32:01Z'
