@@ -1,0 +1,27 @@
+- id: T1
+  title: "Card checks and the test-mode processor: field validation (required fields, Luhn check digit, expiry not in the past, security code length by brand, cardholder name), brand detection and last-four masking, the test cards that give each outcome and decline reason with customer messages, and their documentation (D4, D10, D11)"
+  files:
+    - payments/__init__.py
+    - payments/cards.py
+    - payments/processor.py
+    - docs/test-cards.md
+    - tests/__init__.py
+    - tests/test_cards.py
+    - tests/test_processor.py
+  depends_on: []
+- id: T2
+  title: "Payment store on sqlite3: record every attempt (payment reference, order, amount in minor units, currency, outcome, reason, message, brand, last four, UTC time) with no full card number or security code, look up by order newest first, tell whether an order is paid, list newest first narrowed by outcome (D8, D9, D10)"
+  files:
+    - payments/store.py
+    - tests/test_store.py
+  depends_on: [T1]
+- id: T3
+  title: "Pay order, Order payment status and List payments as a JSON HTTP service per the contract: refuse invalid cards (naming each field), non-positive amounts and already-paid orders without trying a payment, serialise attempts per order so no order is charged twice, replay a repeated idempotency key without a new attempt, return declines as normal answers; server entry point and README (D2, D3, D5, D6, D7, D9, D10)"
+  files:
+    - payments/service.py
+    - payments/api.py
+    - payments/__main__.py
+    - tests/test_service.py
+    - tests/test_api.py
+    - README.md
+  depends_on: [T1, T2]
