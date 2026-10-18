@@ -1,0 +1,37 @@
+feature: open
+summary: >-
+  Each team covers its part of every "Done when" statement and has tests for it. The service
+  (128 tests pass) reports D1 to D11 on its side: Pay order with succeeded, declined and refused
+  answers, the five decline reasons, card checks before any attempt, no second payment for a paid
+  order, attempts handled one at a time per order with Idempotency-Key replay, every attempt
+  recorded, the shop's payment list and per-order lookup, no full card number or security code
+  anywhere, and the test cards in docs/test-cards.md. The web checkout (81 tests pass) reports
+  D1 to D7 and its side of D10: the card form, paid and declined screens that show the service's
+  message as is, checks on each field, retrying on the same page with a new key, a paid order
+  shown as paid, and a lock against double submit. The shop sees outcomes through List payments
+  and Order payment status, as the approved spec decided (open question 3). Neither team
+  noticed a mismatch with the contract.
+  The Feature's main goal is still not shown: no one has seen a customer pay an order. The
+  checkout was tested only against a fake API. The service was tested only through its own
+  suite and was never started and called from the checkout. So the browser's cross-origin calls,
+  the Idempotency-Replayed header and the live answers for each test card are untested together.
+  The Feature stays open until that is checked.
+  Not followed up because the spec put them out of scope or left them to later Stories: checking
+  the amount against an order record, authentication and limiting which origins may call the
+  service, a back-office screen for the shop, and a real payment provider.
+follow-ups:
+  - id: F1
+    title: Check card payment end to end, from the checkout to the service
+    intent: >-
+      Both halves of card payment are built and tested, but only separately. The checkout ran
+      against a fake API, and the service was never called from a browser. So no one has seen a
+      customer actually pay an order, which is the Feature's main goal. This Story runs the
+      checkout page in a browser against the running service. It goes through every test card
+      in docs/test-cards.md and shows that the customer sees the right result each time: paid
+      with the amount charged, or declined with the right reason. It also checks invalid card
+      details, retrying after a decline, an order that is already paid, a double click, and that
+      the shop's payment list and per-order lookup show each attempt. Anything that fails
+      between the two, such as cross-origin calls or the Idempotency-Replayed header, gets fixed.
+      While doing this, also compare the checkout's own field messages with the service's
+      messages for the same mistakes, and make them read the same, so the customer is not shown
+      two different texts for one problem.
