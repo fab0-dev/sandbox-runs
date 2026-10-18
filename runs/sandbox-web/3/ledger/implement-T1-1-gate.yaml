@@ -1,0 +1,64 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/implement-T1
+base:
+  branch: fab0/3/base
+  sha: 64a2dddbb40c3d957262cfbb2738208ba1bec185
+unit: T1
+model: opus
+gate:
+  type: auto
+  merge: auto
+  into: fab0/3/base
+  agent: reviewer
+  decision: approve
+summary: 'The change touches only the unit''s three files (git diff --name-only origin/fab0/3/base...fab0/3/implement-T1
+  lists package.json, src/card-validation.js and tests/card-validation.test.js).;
+  validateCard covers every D4 check: required fields, number of 12 to 19 digits with
+  spaces and dashes ignored, the Luhn check digit, expiry month 1 to 12 with a 2-
+  or 4-digit year that is not in the past (the current month still counts as valid,
+  months taken in UTC), and a security code of digits only, 4 digits for amex and
+  3 otherwise. It returns at most one {field, code, message} per field, in the field
+  order and with the field and code names of the contract''s validation_failed.; Every
+  test card number in the contract passes validation. No message contains card data,
+  and the module keeps nothing and logs nothing (D10).; npm test in the worktree passes
+  24 of 24 tests on Node v24.13.0. Nothing outside the unit''s scope was built.'
+verdict:
+  decision: approve
+  reasons:
+  - The change touches only the unit's three files (git diff --name-only origin/fab0/3/base...fab0/3/implement-T1
+    lists package.json, src/card-validation.js and tests/card-validation.test.js).
+  - 'validateCard covers every D4 check: required fields, number of 12 to 19 digits
+    with spaces and dashes ignored, the Luhn check digit, expiry month 1 to 12 with
+    a 2- or 4-digit year that is not in the past (the current month still counts as
+    valid, months taken in UTC), and a security code of digits only, 4 digits for
+    amex and 3 otherwise. It returns at most one {field, code, message} per field,
+    in the field order and with the field and code names of the contract''s validation_failed.'
+  - Every test card number in the contract passes validation. No message contains
+    card data, and the module keeps nothing and logs nothing (D10).
+  - npm test in the worktree passes 24 of 24 tests on Node v24.13.0. Nothing outside
+    the unit's scope was built.
+  findings:
+  - check: agrees with upstream contract
+    message: The name length is checked after trimming, so a 100-character name with
+      a trailing space passes here but may be refused by the service. This is minor
+      because the service checks again; T2 or T3 should send trimmed values.
+    location: src/card-validation.js:67
+  - check: agrees with upstream contract
+    message: The number check strips all whitespace (\s, which includes tabs and unicode
+      spaces), but the contract only ignores spaces and dashes. Input that passes
+      here can still get invalid_format from the service. Minor.
+    location: src/card-validation.js:32
+  - check: agrees with upstream contract
+    message: The security code is trimmed before it is checked, so ' 123 ' passes
+      here. T2 or T3 should send the trimmed value, because the contract says digits
+      only. Minor.
+    location: src/card-validation.js:130
+  - check: tests and checks
+    message: The test script relies on node --test glob support, which needs Node
+      21 or later, and package.json has no engines field. Minor.
+    location: package.json:8
+started: '2026-10-18T18:21:58Z'
+ended: '2026-10-18T18:25:18Z'
