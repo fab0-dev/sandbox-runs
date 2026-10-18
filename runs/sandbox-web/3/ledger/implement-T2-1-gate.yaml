@@ -1,0 +1,74 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/implement-T2
+base:
+  branch: fab0/3/base
+  sha: 64a2dddbb40c3d957262cfbb2738208ba1bec185
+unit: T2
+model: opus
+gate:
+  type: auto
+  merge: auto
+  into: fab0/3/base
+  agent: reviewer
+  decision: approve
+summary: 'The change touches only the three files T2 owns: src/config.js, src/payments-api.js
+  and tests/payments-api.test.js (checked with git diff --name-only origin/fab0/3/base...fab0/3/implement-T2).;
+  It follows the upstream contract. POST /payments sends the snake_case body with
+  integer amount and expiry and an Idempotency-Key header. GET /orders/{order_reference}/payments
+  URL-encodes the reference. A 200 or 201 with a payment gives kind succeeded or declined,
+  keeping decline_reason and message. A 4xx refusal gives kind refused with code,
+  plus fields only for validation_failed and orderReference only for order_already_paid.
+  A 500, a network failure or an unreadable answer gives kind error. So the checkout
+  can always tell succeeded, declined and refused apart, as the spec asks.; The base
+  URL lives in one configurable place, src/config.js. The default is http://127.0.0.1:8000,
+  taken from the contract notes.; D10 holds on the client side. The card number and
+  security code appear only in the POST body. Returned payments are rebuilt field
+  by field, keeping only brand and last4. Network and parse error messages are fixed
+  text. Nothing is stored in module state.; I ran node --test tests/payments-api.test.js
+  in the worktree on Node v24.13.0: 22 passed, 0 failed.'
+verdict:
+  decision: approve
+  reasons:
+  - 'The change touches only the three files T2 owns: src/config.js, src/payments-api.js
+    and tests/payments-api.test.js (checked with git diff --name-only origin/fab0/3/base...fab0/3/implement-T2).'
+  - It follows the upstream contract. POST /payments sends the snake_case body with
+    integer amount and expiry and an Idempotency-Key header. GET /orders/{order_reference}/payments
+    URL-encodes the reference. A 200 or 201 with a payment gives kind succeeded or
+    declined, keeping decline_reason and message. A 4xx refusal gives kind refused
+    with code, plus fields only for validation_failed and orderReference only for
+    order_already_paid. A 500, a network failure or an unreadable answer gives kind
+    error. So the checkout can always tell succeeded, declined and refused apart,
+    as the spec asks.
+  - The base URL lives in one configurable place, src/config.js. The default is http://127.0.0.1:8000,
+    taken from the contract notes.
+  - D10 holds on the client side. The card number and security code appear only in
+    the POST body. Returned payments are rebuilt field by field, keeping only brand
+    and last4. Network and parse error messages are fixed text. Nothing is stored
+    in module state.
+  - 'I ran node --test tests/payments-api.test.js in the worktree on Node v24.13.0:
+    22 passed, 0 failed.'
+  findings:
+  - check: contract
+    message: A caller-supplied Idempotency-Key is not checked against the contract's
+      1 to 255 character limit; for now T3 only passes keys from newIdempotencyKey(),
+      which fit.
+    location: src/payments-api.js:164
+  - check: robustness
+    message: An abort only counts as an abort if the error is named 'AbortError';
+      if T3 calls controller.abort(reason) with a custom reason, fetch rejects with
+      that reason and the client reports it as network_error.
+    location: src/payments-api.js:133
+  - check: robustness
+    message: If crypto is missing, newIdempotencyKey falls back to Math.random; this
+      is harmless in current browsers and Node, but such keys are weaker.
+    location: src/payments-api.js:47
+  - check: integration
+    message: The files are ES modules and package.json belongs to T1 and is not on
+      this branch, so T1's package.json must not set type commonjs or these tests
+      will stop loading.
+    location: tests/payments-api.test.js:1
+started: '2026-10-18T18:21:59Z'
+ended: '2026-10-18T18:25:22Z'
