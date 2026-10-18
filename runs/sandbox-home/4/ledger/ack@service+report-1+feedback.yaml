@@ -1,0 +1,30 @@
+export:
+  project: sandbox-api
+  run: '3'
+  name: export@report-1+feedback
+decision: accepted
+findings:
+- 'Six details are written down only in the report and the README, not in contract.yaml:
+  Idempotency-Key length refused as invalid_request, order_reference limited to 1
+  to 255 characters, the amount upper bound, control characters in the cardholder
+  name refused as invalid_format, the 64 KB body limit, and idempotency keys forgotten
+  on restart. They should go into contract.yaml so the web team, which builds against
+  the contract as it is, does not meet refusals the contract does not mention. (contract.yaml)'
+- 'A replayed Idempotency-Key returns 200 with Idempotency-Replayed: true, while the
+  first answer was 201. The web checkout must treat 200 and 201 from POST /payments
+  the same way. The contract should say this plainly if it does not already. (contract.yaml)'
+- Idempotency keys are kept in memory and the per-order lock works only within one
+  process. After a restart, or with more than one process, a resent request can record
+  a second declined attempt. The unique index still stops a second success, so D6
+  holds, but 'at most one payment attempt' in D7 holds only within one process lifetime.
+  The report lists this as an open question, and a person should decide whether keys
+  must be stored. (payments/service.py)
+- There is no authentication and any origin is allowed (CORS), so anyone who can reach
+  the service can list payments, including card brand and last four digits. The report
+  correctly hands this to the product owner and a later Story. It is noted here so
+  the decision is not lost.
+- The service team ran only its unit tests. It did not start the server or call it
+  from a web checkout. Whether the service and the web checkout work together end
+  to end still has to be checked when the two teams' parts are put together.
+actor: eugenefurs
+at: '2026-10-18T18:48:24Z'
