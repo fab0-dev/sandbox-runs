@@ -1,0 +1,29 @@
+export:
+  project: sandbox-web
+  run: '3'
+  name: export@report-1+feedback
+decision: accepted
+findings:
+- 'Nothing was run in a real browser or against the running service, so the CORS preflight,
+  the Idempotency-Key request header, reading the Idempotency-Replayed header and
+  the live answer shapes are all untested. The next stage should plan a manual or
+  automated end-to-end run with the service on port 8000 and the test cards in docs/test-cards.md.
+  (sandbox-web fab0/3/report: README.md)'
+- 'The report does not say what the page shows when Pay order is refused with invalid_amount
+  (422) or invalid_request (400), for example from a link with amount=0, a non-integer
+  amount or a malformed currency. It also does not say whether parseOrderParams already
+  rejects those links before the form appears. This should be stated, and tested if
+  missing. (sandbox-web: src/checkout.js parseOrderParams)'
+- 'The report does not say what the page does when the first Order payment status
+  read on load fails (no connection or 500) before the form is shown. Say whether
+  the customer sees an error and a way to retry, or the form anyway. (sandbox-web:
+  src/checkout.js)'
+- 'The contract accepts two-digit expiry years (26 meaning 2026). The report does
+  not say whether the local validateCard accepts the same forms, so local validation
+  might reject input the service accepts, or the other way round. Confirm they match.
+  (sandbox-web: src/card-validation.js)'
+- Taking the amount from the editable page address, and the local validation wording
+  differing from the service's messages, are both reasonable for this Story. They
+  need a product-owner decision later rather than more work from the web team.
+actor: eugenefurs
+at: '2026-10-18T18:48:27Z'
