@@ -1,0 +1,75 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/implement-T1
+base:
+  branch: fab0/3/base
+  sha: 947f72a285ee227a4f15e0ea77304460ba947e97
+unit: T1
+model: opus
+gate:
+  type: auto
+  merge: auto
+  into: fab0/3/base
+  agent: reviewer
+  decision: approve
+summary: 'T1 does what the task, the spec (D4, D10, D11) and contract.yaml ask for.
+  validate_card lists every invalid field in the contract''s order (cardholder_name,
+  number, expiry, security_code). It uses the contract''s codes (required, invalid_format,
+  invalid_number, expired, invalid_length) and covers the required fields, the Luhn
+  check, an expiry in the past (the current month is accepted), the security code
+  length by brand (4 for amex) and the cardholder name rules.; detect_brand returns
+  only the contract''s brands (visa, mastercard, amex, discover, unknown), and mask_card
+  returns only the brand and the last four digits. No validation message or processor
+  result repeats the card number or the security code (D10).; processor.py holds the
+  seven test cards from the contract, with the outcomes and decline reasons the contract
+  gives them. The five decline messages match the contract word for word. Any other
+  Luhn-valid number is approved, which matches the contract''s test_mode_rule.; docs/test-cards.md
+  documents every outcome and every decline reason with its customer message (D11).
+  It is the path the contract''s test_cards operation names, and the tests check that
+  the doc rows match the code.; Scope: `git diff --name-only origin/fab0/3/base...fab0/3/implement-T1`
+  lists exactly the seven task files and nothing else.; Tests: `python3 -m unittest
+  discover -s tests -t .` ran 40 tests, all OK, on Python 3.13. The same command under
+  Python 3.11 also passes, which supports compatibility with the project''s Python
+  3.12.'
+verdict:
+  decision: approve
+  reasons:
+  - T1 does what the task, the spec (D4, D10, D11) and contract.yaml ask for. validate_card
+    lists every invalid field in the contract's order (cardholder_name, number, expiry,
+    security_code). It uses the contract's codes (required, invalid_format, invalid_number,
+    expired, invalid_length) and covers the required fields, the Luhn check, an expiry
+    in the past (the current month is accepted), the security code length by brand
+    (4 for amex) and the cardholder name rules.
+  - detect_brand returns only the contract's brands (visa, mastercard, amex, discover,
+    unknown), and mask_card returns only the brand and the last four digits. No validation
+    message or processor result repeats the card number or the security code (D10).
+  - processor.py holds the seven test cards from the contract, with the outcomes and
+    decline reasons the contract gives them. The five decline messages match the contract
+    word for word. Any other Luhn-valid number is approved, which matches the contract's
+    test_mode_rule.
+  - docs/test-cards.md documents every outcome and every decline reason with its customer
+    message (D11). It is the path the contract's test_cards operation names, and the
+    tests check that the doc rows match the code.
+  - 'Scope: `git diff --name-only origin/fab0/3/base...fab0/3/implement-T1` lists
+    exactly the seven task files and nothing else.'
+  - 'Tests: `python3 -m unittest discover -s tests -t .` ran 40 tests, all OK, on
+    Python 3.13. The same command under Python 3.11 also passes, which supports compatibility
+    with the project''s Python 3.12.'
+  findings:
+  - check: 'contract: cardholder_name at most 100 characters'
+    message: The name length is measured after stripping whitespace, so a name of
+      100 characters plus trailing spaces is accepted even though the raw value is
+      longer than 100. This is minor and the contract does not say which is meant.
+    location: payments/cards.py:111
+  - check: 'contract: expiry_year is four digits or two digits'
+    message: Any year from 0 to 99 is read as 20xx, so a one-digit year such as 5
+      is accepted as 2005 instead of being refused as invalid_format. This is minor.
+    location: payments/cards.py:153
+  - check: code quality
+    message: processor.py imports the private helper `_is_digits` from cards.py. It
+      works, but a public name would be cleaner for the T3 caller.
+    location: payments/processor.py:16
+started: '2026-10-18T18:17:55Z'
+ended: '2026-10-18T18:19:26Z'
