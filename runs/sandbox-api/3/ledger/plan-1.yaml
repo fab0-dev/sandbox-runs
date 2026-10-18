@@ -1,0 +1,83 @@
+step: plan
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/plan
+model: opus
+base:
+  branch: fab0/3/base
+  sha: 6e2b3f3e05c357b3b4b067656c2e41b03c3be86d
+inputs:
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+gate:
+  type: human
+summary: 'I planned the service team''s part (sandbox-api). The repo has no code yet,
+  only a README that says Python 3.12, standard library only, with tests run by `python3
+  -m unittest discover -s tests -t .`. Scope is contract: true, because the web checkout
+  calls Pay order and Order payment status, and the shop calls List payments and Order
+  payment status. The contract step writes contract.yaml at the repo root, and none
+  of the tasks touch that file.
+
+
+  There are three tasks, and they run one after another.
+
+  - T1 builds the payments package, the card checks and the test-mode processor (D4,
+  D10, D11). The checks cover required fields, the card number check digit, expiry
+  not in the past, security code length by brand, brand detection and the last four
+  digits. Each test card gives one outcome, and the card list is written up in docs/test-cards.md.
+
+  - T2 adds a payment store on sqlite3 (D8, D9, D10). It records every attempt and
+  never stores the full card number or security code. It looks up attempts by order,
+  newest first, tells whether an order is paid, and lists payments newest first with
+  an optional outcome filter.
+
+  - T3 adds the service logic and a JSON HTTP API on the standard-library server,
+  plus a server entry point and README updates (D2, D3, D5, D6, D7, D9, D10).
+
+
+  T2 and T3 cannot run in parallel with T1 because T1 creates payments/__init__.py
+  and tests/__init__.py. Test discovery in Python 3.12 needs those files.
+
+
+  Choices I made where the spec leaves things open; the contract step settles the
+  exact form:
+
+  1. I took the spec''s readings: test mode only, the checkout passes the amount,
+  the shop uses the listing calls, and one explicit currency per payment.
+
+  2. Amounts are integer minor units with an ISO 4217 currency code. Times are UTC
+  ISO 8601.
+
+  3. Storage is sqlite3 with a configurable file path.
+
+  4. Test cards are chosen by card number, in the style of the common provider test
+  numbers: one success card and one card per decline reason. Their expiry and security
+  code just need to pass the checks.
+
+  5. The API has three kinds of answer. A decline is a normal 200 answer that carries
+  a reason code and a customer message. Invalid input is refused with 422 and lists
+  the errors field by field. An already-paid order is refused with 409 and a customer
+  message. Paths: POST /orders/{ref}/payments, GET /orders/{ref}/payments, GET /payments?outcome=.
+
+  6. For D6 and D7, the service handles one attempt per order at a time. This means
+  two requests that race cannot both charge the order.
+
+  7. Pay order also takes an optional idempotency key. If the same key comes again,
+  the service returns the first payment and makes no new attempt. This backs up the
+  web team''s disabled submit button; the spec does not ask for it.
+
+
+  Outputs:
+
+  - /Users/zhen/Work/Fab0/sandbox-api/.git/fab0/out/3/plan-1/tasks.yaml
+
+  - /Users/zhen/Work/Fab0/sandbox-api/.git/fab0/out/3/plan-1/scope.yaml'
+outputs:
+  tasks: sha256:42dc3705783511953ff2985daf736469228a6baa588aa5725e99dc9830b2696b
+  scope: sha256:a28dd9f840bea16fb84bd231571f7546cf359cfc301f5ea19ad0c4335e2de9bb
+verify:
+  tasks: pass
+  scope: pass
+started: '2026-10-18T17:54:56Z'
+ended: '2026-10-18T17:56:26Z'
