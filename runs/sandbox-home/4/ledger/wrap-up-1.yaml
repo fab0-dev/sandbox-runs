@@ -1,0 +1,42 @@
+step: wrap-up
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/4/wrap-up
+model: opus
+base:
+  branch: main
+  sha: aab60a63a4ef8d42a572090b0ba269ba71b7d4b5
+inputs:
+  feature: sha256:9df75e18964eef3a5e030500da6631cff240d834e3ab122ac50a5e1b2557bed5
+  story: sha256:65c490d38cb2c898134e900b03d9fe06f0dfd5ea425a9180c56b4bd142ad8ba0
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+  contract: sha256:e6b5349a984354ff92acf92f72610d67cd38ecc6e4a4b570a38de4b3d5814c7f
+  service-feedback: sha256:af86af7edefa505169fe2176abbefd87c26272b93207927c140a3e732d1ff73d
+  web-feedback: sha256:9b0560ca18dab82ba89d9042a2a2ea60223106487fad74b2cd07b66abef10225
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+gate:
+  type: human
+summary: 'I wrote /Users/zhen/Work/Fab0/sandbox-home/.git/fab0/out/4/wrap-up-1/outcome.yaml
+  with feature: open and one follow-up, F1. Between them, the two reports cover every
+  Done-when statement D1 to D11 for each team''s own part. The service has 128 passing
+  tests and covers D1 to D11 on its side. The web checkout has 81 passing tests and
+  covers D1 to D7 and its side of D10. The shop seeing payment outcomes is met through
+  List payments and Order payment status, as the approved spec decided. The Feature''s
+  main goal, a customer paying an order at checkout, has still not been shown. The
+  checkout was tested only against a fake API, and the service was never started and
+  called from a browser. So the cross-origin calls, the Idempotency-Replayed header
+  and the live answer for each test card have not been tested together. F1 asks for
+  a run of the checkout in a browser against the running service, going through every
+  test card and the refusal, retry, already-paid and double-click cases, and fixing
+  anything that breaks. It also asks that the checkout''s own field messages read
+  the same as the service''s messages for the same mistake. I filed no follow-ups
+  for things the spec put out of scope or left to later Stories: checking the amount
+  against an order, authentication and limiting which origins may call the service,
+  a back-office screen for the shop, and a real payment provider.'
+outputs:
+  outcome: sha256:17d9e720b3bef7726dd44d28a593063480011dac71a7c1e8ef57b78395f82478
+verify:
+  outcome: pass
+started: '2026-10-18T18:48:45Z'
+ended: '2026-10-18T18:50:55Z'
