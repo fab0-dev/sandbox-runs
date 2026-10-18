@@ -1,0 +1,60 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/implement-T2
+unit: T2
+model: sonnet
+base:
+  branch: fab0/3/base
+  sha: 6283ad920749b231a55f0e61a5e618cfacf09422
+inputs:
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+  tasks: sha256:42dc3705783511953ff2985daf736469228a6baa588aa5725e99dc9830b2696b
+  unit: sha256:3e2d2bb1388c2eda5c2f7de93a34bfa4ca5ae4314427d3eaaa1a78f22a216e35
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+claims:
+- home:payments/store.py
+- home:tests/test_store.py
+gate:
+  type: auto
+summary: "Added the sqlite3 payment store in payments/store.py, with tests in tests/test_store.py.\
+  \ The whole suite passes (69 tests, `python3 -m unittest discover -s tests -t .`).\n\
+  \nPublic API for T3, all in `payments.store`:\n- `PaymentStore(path=':memory:')`\
+  \ has `close()` and works as a context manager. One connection is shared with a\
+  \ lock, so it is safe behind a threaded server.\n- `record_attempt(*, order_reference,\
+  \ amount, currency, outcome, decline_reason, message, brand, last4, created_at=None)`\
+  \ returns a frozen `Payment`.\n  - `Payment` has the fields `payment_reference`\
+  \ (like `pay_` plus 12 hex characters), `order_reference`, `amount` (minor units),\
+  \ `currency`, `outcome`, `decline_reason`, `message`, `brand`, `last4`, `created_at`.\n\
+  \  - `as_dict()` gives the contract shape, with `card: {brand, last4}`.\n  - `created_at`\
+  \ defaults to now and is stored as UTC to the second, like `2026-10-18T14:03:22Z`.\n\
+  - `attempts_for_order(order_reference)` returns the order's attempts newest first,\
+  \ with ties broken by the later attempt first. An unknown order gives an empty list.\n\
+  - `is_paid(order_reference)` is true when any attempt for the order succeeded.\n\
+  - `list_payments(outcome=None, limit=100, cursor=None)` returns a `Page(payments,\
+  \ next_cursor)`, newest first, narrowed by outcome when given.\n  - Paging uses\
+  \ an opaque cursor, so the shop can reach the oldest payments, as the contract's\
+  \ list_payments says.\n  - It raises `ValueError` for a bad outcome or a limit outside\
+  \ 1 to 500, and `InvalidCursor` (a `ValueError` subclass) for a cursor the store\
+  \ did not issue. T3 can map both to the contract's 400 `invalid_request`.\n- Other\
+  \ names: `OrderAlreadyPaid` carries `.order_reference`; `OUTCOMES`, `DEFAULT_LIMIT`\
+  \ and `MAX_LIMIT` are also exported.\n\nD10: the table has no column for a full\
+  \ card number or security code.\n- `record_attempt` raises `ValueError` unless `last4`\
+  \ is exactly four ASCII digits, so a full number cannot be passed in by mistake.\n\
+  - A test reads the sqlite file and checks that neither a test number nor a security\
+  \ code appears in it.\n\nSqlite also enforces the other fields, as defence beyond\
+  \ the Python checks (all covered by tests).\n- `record_attempt` refuses an amount\
+  \ that is not a positive integer, a currency that is not three upper-case letters,\
+  \ an unknown brand, an unknown outcome or decline reason, and a succeeded attempt\
+  \ that carries a decline reason.\n- A partial unique index allows at most one succeeded\
+  \ attempt per order. A second success raises `OrderAlreadyPaid` and records nothing,\
+  \ which backs up D6 and D7 under concurrency. A test with 8 threads confirms it.\
+  \ T3 should still check `is_paid` first so it can refuse before trying a payment.\n\
+  \nNothing outside my two files was changed. For T3: `record_attempt` does not check\
+  \ that `message` is free of card data, so the caller must pass only the processor's\
+  \ fixed messages."
+started: '2026-10-18T18:19:53Z'
+ended: '2026-10-18T18:22:02Z'
+heads:
+  home: 728ca16e56d5701101ed5ee7150c984dbcec717e
