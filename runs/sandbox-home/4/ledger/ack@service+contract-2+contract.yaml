@@ -1,0 +1,35 @@
+export:
+  project: sandbox-api
+  run: '3'
+  name: export@contract-2+contract
+decision: accepted
+findings:
+- 'The contract does not say what pay_order returns when the card object is missing
+  or is not an object. Both validation_failed with every field marked required and
+  invalid_request are possible readings; name the one the service returns. (contract:
+  operations.pay_order.response.refused.invalid_request)'
+- '''An expiry date in the past'' is not pinned down: say whether the current month
+  still counts as valid and which clock is used (UTC or local). The checkout''s own
+  check should match the service''s. (contract: operations.pay_order.request.body.card.expiry_month
+  / expiry_year)'
+- 'The security code length depends on the brand, but the contract does not say how
+  the brand comes from the number (its prefix ranges) or what length applies when
+  the brand is unknown. Document both so the checkout can check the code before submitting.
+  (contract: operations.pay_order.request.body.card.security_code; payment.card.brand)'
+- 'The contract does not say what happens to an Idempotency-Key that breaks its 1
+  to 255 character rule (empty or too long), or how long a key is remembered. Name
+  the refusal code for a bad key and say how long keys are kept. (contract: operations.pay_order.request.headers.Idempotency-Key)'
+- '''Malformed'' currency is unclear: say whether any three upper-case letters are
+  accepted or only real ISO 4217 codes. (contract: operations.pay_order.request.body.currency)'
+- 'order_reference has no limit on length or characters, yet it sits in the path of
+  GET /orders/{order_reference}/payments. Say whether a reference may contain ''/''
+  and how an encoded %2F is routed. (contract: operations.order_payment_status.request.path.order_reference)'
+- 'order_paid is defined as ''true when this attempt succeeded'', so a replayed decline
+  still says false even if the order has been paid since. Either call it a property
+  of the attempt, or note that the checkout should read order_payment_status for the
+  order''s current state. (contract: operations.pay_order.response.succeeded.body.order_paid)'
+- 'The contract does not say whether recorded payments survive a service restart.
+  D8 and D9 suggest they should; state where payments are kept, or name the limit
+  as open in the report. (contract: notes)'
+actor: eugenefurs
+at: '2026-10-18T18:13:29Z'
