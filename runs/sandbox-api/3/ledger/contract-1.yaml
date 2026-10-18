@@ -1,0 +1,38 @@
+step: contract
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/contract
+model: sonnet
+base:
+  branch: fab0/3/base
+  sha: 6e2b3f3e05c357b3b4b067656c2e41b03c3be86d
+inputs:
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+  tasks: sha256:42dc3705783511953ff2985daf736469228a6baa588aa5725e99dc9830b2696b
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+claims:
+- home:contract.yaml
+gate:
+  type: auto
+summary: 'Wrote contract.yaml with four operations: pay_order (POST /payments), order_payment_status
+  (GET /orders/{order_reference}/payments), list_payments (GET /payments) and test_cards
+  (documentation). It parses as YAML, and each operation''s request and response are
+  objects. I did not run `record` or validate it against the JSON schema. pay_order
+  returns succeeded and declined as HTTP 201 with a payment, and refusals as a 4xx
+  with an error body. Refusals are validation_failed (naming each field), invalid_amount,
+  invalid_request, order_already_paid and idempotency_key_reused. Amounts are integer
+  minor units and currency is explicit. The notes record the choices I made on the
+  spec''s open questions, which the run can change. These are no real provider, the
+  caller passes the amount, shop access through the two read operations, and the Idempotency-Key
+  header. They also cover per-order serialisation, the exact decline messages, and
+  the test card numbers for each outcome. The contract is at contract.yaml. I changed
+  no other file.'
+outputs:
+  contract: sha256:01e40d1e362ecacef87bdf63e855b38b4b34589efa1a5ee94ab3304ffc3c206b
+verify:
+  contract: pass
+started: '2026-10-18T17:59:20Z'
+ended: '2026-10-18T18:00:47Z'
+heads:
+  home: 5fbcf97800ab81f5d7cd4371b9d8baaf35df6932
