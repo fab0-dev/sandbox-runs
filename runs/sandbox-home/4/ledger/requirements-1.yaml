@@ -1,0 +1,33 @@
+step: requirements
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/4/requirements
+model: opus
+base:
+  branch: main
+  sha: aab60a63a4ef8d42a572090b0ba269ba71b7d4b5
+inputs:
+  feature: sha256:9df75e18964eef3a5e030500da6631cff240d834e3ab122ac50a5e1b2557bed5
+  story: sha256:65c490d38cb2c898134e900b03d9fe06f0dfd5ea425a9180c56b4bd142ad8ba0
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+gate:
+  type: human
+summary: 'Wrote /Users/zhen/Work/Fab0/sandbox-home/.git/fab0/out/4/requirements-1/spec.md
+  for the ''pay an order by card at checkout'' Story. It covers all three of the Feature''s
+  goals: paying by card, showing the customer the result and the decline reason, and
+  letting the shop see each payment''s outcome. It has 11 checkable Done-when statements
+  (D1-D11). Payments run in test mode, with documented test cards for each outcome.
+  Invalid card details are rejected before any payment is tried, an order can''t be
+  paid twice, and full card numbers are never stored or shown. The service offers
+  ''Pay order'', ''Order payment status'' and ''List payments'', plus its test-card
+  documentation, to the web checkout and the shop. Open questions, each with the reading
+  I chose: no real payment provider (test mode only); the checkout passes the amount
+  to charge; the shop sees outcomes through the service''s payment listing, not a
+  new back-office screen; and every payment carries its currency explicitly.'
+outputs:
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+verify:
+  spec: pass
+started: '2026-10-18T17:44:06Z'
+ended: '2026-10-18T17:45:09Z'
