@@ -1,0 +1,110 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/implement-T3
+unit: T3
+model: sonnet
+base:
+  branch: fab0/3/base
+  sha: c2bdb0d27c681e19d19e7fbeccfba1421fc29f65
+inputs:
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+  upstream: sha256:e6b5349a984354ff92acf92f72610d67cd38ecc6e4a4b570a38de4b3d5814c7f
+  tasks: sha256:1e56bce73e127a530cf09bd16bc6b34dd0239c4aaf8a3fbf38ebaa6c3521538a
+  unit: sha256:51f3de935e0fc59961a1987f70744ecd4ff2931036f34028b984d41377841e71
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+claims:
+- home:index.html
+- home:checkout.html
+- home:src/checkout.js
+- home:styles.css
+- home:tests/checkout.test.js
+- home:README.md
+gate:
+  type: auto
+summary: 'T3 is done: the checkout payment step is built, and all 81 tests pass with
+  `npm test` (the new checkout tests plus the T1 and T2 ones). I did not run it in
+  a real browser or against the real service. The page logic is tested with a fake
+  API, and the page binding is tested against the real ids in `checkout.html` using
+  a small stand-in for DOM elements.
+
+
+  The page is `checkout.html?order=..&amount=..&currency=..` (amount in minor units).
+  A missing or malformed parameter shows a ''link not complete'' message and no form.
+
+
+  Behaviour, with the Done-when points it covers:
+
+  - Status first: the order''s payment status loads before anything else. A paid order
+  shows as paid with the amount charged (taken from its latest successful payment)
+  and no form (D6). A failed load shows the error with a Try again button.
+
+  - Submit lock (D7): the lock is taken before any await, and the fieldset and button
+  are disabled while processing. A double submit makes one attempt; the tests cover
+  this at logic level and page level.
+
+  - Local checks (D4): `validateCard` from T1 runs first. If a field is wrong, nothing
+  is sent and each wrong field shows its message.
+
+  - Success (D2): shows paid, the amount charged and the card brand with last four
+  digits.
+
+  - Decline (D3, D5): shows the service''s `message` as sent, on the same page, with
+  the form ready to retry. `data-reason` is set on the panel for styling. The order
+  is not reloaded, and a later success shows paid.
+
+  - Service refusals: `validation_failed` shows its field errors next to the same
+  fields as the local ones. `order_already_paid` shows paid with the service''s message,
+  and reads the status for the amount if it can. Other refusals show the message above
+  the form.
+
+  - No usable answer from Pay order (no connection, a server error): the page reads
+  the order status before offering the form again. A payment that did go through shows
+  as paid. If the status can''t be read either, the notice tells the customer to check
+  before trying again.
+
+  - Card data (D10): the number and security code are cleared after every attempt
+  that was sent, in a `finally`, so an exception clears them too. The tests check
+  that they appear in no state given to the view.
+
+
+  Files changed: `checkout.html`, `index.html` (a small form that builds a test checkout
+  link), `src/checkout.js`, `styles.css`, `tests/checkout.test.js`, `README.md` (how
+  to serve and run it, the URL parameters, the test cards).
+
+
+  Choices and caveats:
+
+  - When a local check blocks the submit, the card number and code are not cleared,
+  because nothing was sent and the customer needs to fix them. A service-side `validation_failed`
+  does clear them.
+
+  - The page lets `payOrder` make a fresh Idempotency-Key for each submit and never
+  reuses one. The card is cleared after each attempt, so there is no resend of the
+  same submit.
+
+  - Browsers do not load ES modules from `file://`. The README says to serve the folder,
+  for example with `python3 -m http.server 8080`.
+
+  - The amount comes from the URL, per the spec''s open question 2, so a customer
+  can edit it. That is the spec''s accepted reading.
+
+  - `src/card-validation.js` takes the expiry as separate month and year inputs, so
+  the page has two inputs and one `expiry` error area.
+
+  - Not mine, nothing to flag: T1 and T2 files were used as they are, with no gaps
+  found in the upstream contract.'
+data:
+  files_changed:
+  - index.html
+  - checkout.html
+  - src/checkout.js
+  - styles.css
+  - tests/checkout.test.js
+  - README.md
+  tests: 'npm test: 81 pass, 0 fail'
+started: '2026-10-18T18:25:56Z'
+ended: '2026-10-18T18:30:09Z'
+heads:
+  home: 8394838c9f5418243edc91d68aaf23d19ac40b22
