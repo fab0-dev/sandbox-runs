@@ -1,0 +1,78 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/implement-T1
+unit: T1
+model: sonnet
+base:
+  branch: fab0/3/base
+  sha: 64a2dddbb40c3d957262cfbb2738208ba1bec185
+inputs:
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+  upstream: sha256:e6b5349a984354ff92acf92f72610d67cd38ecc6e4a4b570a38de4b3d5814c7f
+  tasks: sha256:1e56bce73e127a530cf09bd16bc6b34dd0239c4aaf8a3fbf38ebaa6c3521538a
+  unit: sha256:e62274fc6359cd62b77c4034cf4b0b6d290acf52c93e24bab887d38e0806194a
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+claims:
+- home:src/card-validation.js
+- home:tests/card-validation.test.js
+- home:package.json
+gate:
+  type: auto
+summary: 'T1 is done. `validateCard(card, now = new Date())` in `src/card-validation.js`
+  checks card details in the browser and returns `{valid, errors}`. `errors` has at
+  most one `{field, code, message}` per invalid field, in the order cardholder_name,
+  number, expiry, security_code. Field and code names are the service''s validation_failed
+  names (required, invalid_format, invalid_number, expired, invalid_length), so T3
+  can show local and service errors the same way. The 24 tests in `tests/card-validation.test.js`
+  pass with `npm test`. No browser run was done, but the module uses no Node-specific
+  APIs.
+
+
+  The checks:
+
+  - **Name:** required, at most 100 characters.
+
+  - **Number:** required. Spaces and dashes are ignored. It must be 12 to 19 digits
+  and pass the Luhn check digit.
+
+  - **Expiry:** month and year both required. Month is 1 to 12. Year is 2 or 4 digits,
+  and 2 digits means 20xx. It is expired only if its month is before the current month,
+  so a card works through its last month. The current month is taken in UTC, like
+  the service. Values can be form strings or numbers.
+
+  - **Security code:** required, digits only. When the number is readable, it must
+  be 4 digits for an Amex number and 3 otherwise. When the number is missing or malformed,
+  3 or 4 digits are accepted so one number typo does not also flag the code. The service
+  still checks by brand.
+
+  - **Other exports:** `passesLuhn`, `detectBrand`, `FIELDS` and `CODES`.
+
+  - **Card data (D10):** the module keeps and logs nothing, and no message contains
+  any part of the number or the code. A test checks this.
+
+
+  `package.json` is new, since the repo had none. It sets `"type": "module"` so the
+  source loads as an ES module in the browser (`<script type="module">`) and in Node.
+  The test script is `node --test "tests/**/*.test.js"`, which also picks up T2 and
+  T3 tests. The tests ran on Node v24.13.0.
+
+
+  Nothing found outside my files that needs fixing.'
+data:
+  files:
+  - src/card-validation.js
+  - tests/card-validation.test.js
+  - package.json
+  exports:
+  - validateCard
+  - passesLuhn
+  - detectBrand
+  - FIELDS
+  - CODES
+  test_command: npm test
+started: '2026-10-18T18:17:18Z'
+ended: '2026-10-18T18:21:30Z'
+heads:
+  home: c4dc8844de4da55368a8abbae3ebed8396da8a9f
