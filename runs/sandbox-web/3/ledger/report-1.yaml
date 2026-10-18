@@ -1,0 +1,29 @@
+step: report
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/report
+model: sonnet
+base:
+  branch: fab0/3/base
+  sha: fdc0f0ece874295af7a8bf3471197f0eb4954bb3
+inputs:
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+  upstream: sha256:e6b5349a984354ff92acf92f72610d67cd38ecc6e4a4b570a38de4b3d5814c7f
+  tasks: sha256:1e56bce73e127a530cf09bd16bc6b34dd0239c4aaf8a3fbf38ebaa6c3521538a
+gate:
+  type: none
+summary: 'Wrote the web team report to /Users/zhen/Work/Fab0/sandbox-web/.git/fab0/out/3/report-1/feedback.md,
+  with the sections Delivered, Deviations and Open questions. On branch fab0/3/report,
+  T1, T2 and T3 are merged, and npm test gives 81 passing tests. D1 to D7 are delivered
+  in the checkout, plus the web side of D10. The five decline reasons show the service''s
+  message as it is. There are no deviations from the spec or the contract. Three open
+  points are listed: nothing was run in a real browser or against the live service,
+  the order and amount come from the page address, and the local validation wording
+  is this team''s own.'
+outputs:
+  feedback: sha256:9b0560ca18dab82ba89d9042a2a2ea60223106487fad74b2cd07b66abef10225
+verify:
+  feedback: pass
+started: '2026-10-18T18:33:22Z'
+ended: '2026-10-18T18:35:25Z'
