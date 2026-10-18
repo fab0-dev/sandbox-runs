@@ -1,0 +1,105 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/implement-T2
+unit: T2
+model: sonnet
+base:
+  branch: fab0/3/base
+  sha: 64a2dddbb40c3d957262cfbb2738208ba1bec185
+inputs:
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+  upstream: sha256:e6b5349a984354ff92acf92f72610d67cd38ecc6e4a4b570a38de4b3d5814c7f
+  tasks: sha256:1e56bce73e127a530cf09bd16bc6b34dd0239c4aaf8a3fbf38ebaa6c3521538a
+  unit: sha256:daae910aa808a7e297aa9f98a55b3430d30a29de95d194a93d28798a596dfbee
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+claims:
+- home:src/config.js
+- home:src/payments-api.js
+- home:tests/payments-api.test.js
+gate:
+  type: auto
+summary: 'Added the payments API client for T2, with 22 passing tests. I ran them
+  with `node --test tests/payments-api.test.js` on Node 24.13. The directory form
+  `node --test tests/` failed to find the tests, so name the file or use a glob. The
+  code is plain ES modules, so it loads in the browser with `<script type="module">`.
+
+
+  src/config.js holds the base URL in one place. The default is `http://127.0.0.1:8000`,
+  from the contract notes. It can be changed with `window.CHECKOUT_CONFIG = { paymentsBaseUrl
+  }` set before the scripts load, or with `setPaymentsBaseUrl(url)`. Trailing slashes
+  are stripped, and the URL is read at each call.
+
+
+  src/payments-api.js exports `payOrder(request, {idempotencyKey, signal})`, `getOrderPaymentStatus(orderReference,
+  {signal})`, `newIdempotencyKey()` and `createPaymentsApi({fetch, baseUrl})`. The
+  last one is for tests. `payOrder` takes `{ orderReference, amount, currency, card:
+  { cardholderName, number, expiryMonth, expiryYear, securityCode } }`. Calls resolve
+  to an object instead of throwing, and `kind` tells the cases apart:
+
+  - `succeeded`: `{ payment, orderPaid: true, replayed, idempotencyKey }`.
+
+  - `declined`: `{ payment, orderPaid: false, replayed, idempotencyKey }`. `payment.decline_reason`
+  and `payment.message` give the reason and the text to show.
+
+  - `refused`: `{ status, code, message, fields, fieldErrors, orderReference }`. `code`
+  is `validation_failed`, `invalid_amount`, `invalid_request`, `order_already_paid`
+  or `idempotency_key_reused`. `fields` is `[{field, code, message}]` and `fieldErrors`
+  maps field to message. They appear only for `validation_failed`. `orderReference`
+  appears only for `order_already_paid`.
+
+  - `error`: `{ status, code, message }` for `network_error`, `internal_error`, `unexpected_response`
+  and similar. The attempt may or may not have been recorded, so read the order status
+  before submitting again.
+
+
+  `getOrderPaymentStatus` returns `{ kind: ''ok'', orderReference, paid, payments
+  }` or a `kind: ''error''` object. An order with no attempts comes back as unpaid
+  with an empty list.
+
+
+  What the client does beyond the contract:
+
+  - The `Idempotency-Key` header is always sent. If the caller gives no key, a fresh
+  one is made and returned as `idempotencyKey`. T3 should make one key per form submit
+  and pass the same key only when resending that submit.
+
+  - Expiry month and year, and the amount, are sent as integers when the form gives
+  digit strings. Anything else is sent as it is, so the service refuses it.
+
+  - Card data (D10): the card number and security code go only in the body of the
+  one `POST /payments`. They are not logged, not stored, not in the URL or headers,
+  and not kept in module state. Payments that come back are copied field by field,
+  so only brand and last4 remain, even if a service wrongly echoes the card. Error
+  messages for network and unreadable answers are fixed text.
+
+  - The `payment` objects keep the contract''s snake_case names. Only the wrapper
+  fields are camelCase.
+
+  - If the caller aborts a request, the abort error is thrown, so T3 can tell it apart
+  from a service answer.
+
+
+  Tests cover the request shape, all three answer kinds, all five decline reasons,
+  every refusal, 500, network and malformed answers, replay, the base URL settings,
+  and the D10 checks.
+
+
+  Not mine: `package.json` is T1''s file and does not exist on this branch. The code
+  is ES modules, and Node loaded it and ran the tests without it. If T1''s package.json
+  sets `"type": "commonjs"`, these files will need `"type": "module"` or `.mjs` names.
+  T1 should use ES modules too so the browser and tests share one style.'
+data:
+  files:
+  - src/config.js
+  - src/payments-api.js
+  - tests/payments-api.test.js
+  tests:
+    command: node --test tests/payments-api.test.js
+    passed: 22
+    failed: 0
+started: '2026-10-18T18:17:21Z'
+ended: '2026-10-18T18:21:37Z'
+heads:
+  home: 9624daba0e85fa0645896d1cc5d9fce33e06b455
