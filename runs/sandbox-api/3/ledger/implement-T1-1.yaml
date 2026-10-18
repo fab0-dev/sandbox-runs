@@ -1,0 +1,67 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/implement-T1
+unit: T1
+model: sonnet
+base:
+  branch: fab0/3/base
+  sha: 947f72a285ee227a4f15e0ea77304460ba947e97
+inputs:
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+  tasks: sha256:42dc3705783511953ff2985daf736469228a6baa588aa5725e99dc9830b2696b
+  unit: sha256:0fa8590f1d778d0011b1eb41ef64ebeb632eba9d80d6199d398a0b0f3e1b33ab
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+claims:
+- home:payments/__init__.py
+- home:payments/cards.py
+- home:payments/processor.py
+- home:docs/test-cards.md
+- home:tests/__init__.py
+- home:tests/test_cards.py
+- home:tests/test_processor.py
+gate:
+  type: auto
+summary: "T1 is done. I added the card checks, the test-mode processor, the test-cards\
+  \ documentation and tests, in the seven task files only. `python3 -m unittest discover\
+  \ -s tests -t .` passes (40 tests, standard library only).\n\n- payments/cards.py:\n\
+  \  - `validate_card(card, today=None)` returns a list of `FieldError(field, code,\
+  \ message)`. It lists every invalid field in the order cardholder_name, number,\
+  \ expiry, security_code, and returns an empty list when the card is acceptable.\n\
+  \  - Codes and checks follow contract.yaml. Required fields, the Luhn check digit\
+  \ and the format checks use `required`, `invalid_number` and `invalid_format`. An\
+  \ expiry in the past gives `expired`. The name is non-blank and at most 100 characters.\n\
+  \  - The expiry accepts a four-digit year or a two-digit year. A card is good through\
+  \ the last day of its expiry month. Booleans, strings and floats are rejected as\
+  \ `invalid_format`.\n  - The security code is 3 digits, or 4 for amex. The brand\
+  \ is still found from the prefix when the check digit fails, so the code length\
+  \ is still judged then. When the number is missing or malformed, the brand is unknown\
+  \ and 3 or 4 digits are accepted, so the security code is not blamed for a number\
+  \ problem.\n  - `detect_brand` returns visa, mastercard, amex, discover or unknown.\
+  \ `mask_card(number)` returns `CardSummary(brand, last4)` and raises `ValueError`\
+  \ if the input is not 12 to 19 digits.\n  - Messages are fixed texts and never echo\
+  \ the number or the security code.\n- payments/processor.py:\n  - `process_card(number)`\
+  \ returns `ProcessorResult(outcome, decline_reason, message)`. It carries no card\
+  \ data and raises `ValueError` for a non-digit input.\n  - The `TEST_CARDS` tuple,\
+  \ `DECLINE_MESSAGES`, `DECLINE_REASONS` and `SUCCESS_MESSAGE` hold the seven contract\
+  \ test cards and the five exact contract decline messages. The success message is\
+  \ \"Payment received. Your order is paid.\" The contract gave no wording for it,\
+  \ so this one is my choice.\n  - Any other Luhn-valid number is approved.\n- docs/test-cards.md:\
+  \ the table of cards, outcomes, reasons and messages, and the rule for the other\
+  \ details. It also covers the card checks that refuse before any payment, and states\
+  \ that card data is not kept.\n- tests/test_cards.py and tests/test_processor.py:\
+  \ tests for each rule above. They also check that the doc lists every test card,\
+  \ reason and message, and that each doc row matches the code.\n\nFor later tasks,\
+  \ T3 should call `validate_card` and map each `FieldError` into the `fields` of\
+  \ a `validation_failed` refusal. It should call `process_card(normalize_number(number))`\
+  \ or pass the raw number, since the function strips spaces and dashes itself. It\
+  \ should use `mask_card` for brand and last4.\n\nThe `expired_card` decline comes\
+  \ from its test card number, not from the entered expiry. An expiry in the past\
+  \ is refused earlier as `validation_failed`. I wrote this into the doc.\n\nThe security-code\
+  \ behaviour when the number is bad is not in the contract. It is a judgement call,\
+  \ documented in the `validate_card` docstring. Nothing outside my files needed changing."
+started: '2026-10-18T18:15:17Z'
+ended: '2026-10-18T18:17:37Z'
+heads:
+  home: d385fe240f353d7481220ee4adc2ae8f9c1faa6a
