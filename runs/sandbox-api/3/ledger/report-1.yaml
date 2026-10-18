@@ -1,0 +1,33 @@
+step: report
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/report
+model: sonnet
+base:
+  branch: fab0/3/base
+  sha: cea2c4dc3b3ca3822f41359b671f4f869b19b9b0
+inputs:
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+  tasks: sha256:42dc3705783511953ff2985daf736469228a6baa588aa5725e99dc9830b2696b
+gate:
+  type: none
+summary: 'Report written to /Users/zhen/Work/Fab0/sandbox-api/.git/fab0/out/3/report-1/feedback.md,
+  with the sections Delivered, Deviations and Open questions. On the run branch fab0/3/report
+  the service has all of T1 to T3. Tests pass: 128 run, all OK. Delivered covers D4
+  and D6 to D11 in full and the service side of D1 to D3, D5 and D7. Deviations: none
+  from the spec or from the contract''s names, status codes or shapes. The report
+  lists six small extras that the contract doesn''t state: Idempotency-Key and order_reference
+  length limits, control characters in the cardholder name, security code length when
+  the number is bad, idempotency keys held in memory only, and the request body limit.
+  Open questions: the amount is not checked against an order record, idempotency keys
+  are lost on restart, there is no authentication and any origin is allowed, and no
+  shop screen exists. I did not start the server or call it from a web checkout.'
+data:
+  feedback_path: /Users/zhen/Work/Fab0/sandbox-api/.git/fab0/out/3/report-1/feedback.md
+outputs:
+  feedback: sha256:af86af7edefa505169fe2176abbefd87c26272b93207927c140a3e732d1ff73d
+verify:
+  feedback: pass
+started: '2026-10-18T18:32:35Z'
+ended: '2026-10-18T18:34:06Z'
