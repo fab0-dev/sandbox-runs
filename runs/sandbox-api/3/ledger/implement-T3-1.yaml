@@ -1,0 +1,77 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/3/implement-T3
+unit: T3
+model: sonnet
+base:
+  branch: fab0/3/base
+  sha: 1568998dffe9aa5cccabbfb8d556b4c313ffa121
+inputs:
+  spec: sha256:da29f35de445e33630905a6be13262232f3f7f06d130d988cad202722fe49a04
+  tasks: sha256:42dc3705783511953ff2985daf736469228a6baa588aa5725e99dc9830b2696b
+  unit: sha256:27c2688121b6aacdf3aabb66bc95c917bddda716d8cf761771a0259114f5e0ae
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+claims:
+- home:payments/service.py
+- home:payments/api.py
+- home:payments/__main__.py
+- home:tests/test_service.py
+- home:tests/test_api.py
+- home:README.md
+gate:
+  type: auto
+summary: "T3 is done. The JSON HTTP service for Pay order, Order payment status and\
+  \ List payments is in place with its entry point and README. The full suite passes\
+  \ (128 tests, 59 of them new, stable over 5 repeat runs), and a `python3 -m payments`\
+  \ run with curl matched the contract.\n\nWhat was built:\n- `payments/service.py`\
+  \ is `PaymentService`, with no HTTP.\n  - Refusals are judged in the contract's\
+  \ order: invalid_request, invalid_amount, validation_failed, idempotency_key_reused,\
+  \ order_already_paid. None of them runs the processor or records an attempt.\n \
+  \ - Attempts are serialised per order, so concurrent submits for one order charge\
+  \ it once. Different orders run side by side.\n  - A repeated Idempotency-Key with\
+  \ the same body gets the first answer with no new attempt. The 'same body' check\
+  \ is an HMAC-SHA-256 digest over order, amount, currency, cardholder name, brand,\
+  \ last4 and expiry, computed without the card number or security code.\n  - The\
+  \ replay is checked before the already-paid check. Only succeeded and declined answers\
+  \ are remembered. A refusal or an exception forgets the key. A concurrent same-key\
+  \ request waits for the first and replays it.\n  - Declines come back as normal\
+  \ answers.\n- `payments/api.py` is a threaded standard-library server, with `make_server(service,\
+  \ host, port, quiet)`.\n  - Status codes are 201 (200 on replay, with `Idempotency-Replayed:\
+  \ true`), 400, 409, 422, 404, 405 with `Allow`, 500 and 204 for preflight.\n  -\
+  \ Error bodies share one shape.\n  - CORS headers are on every response.\n  - Request\
+  \ bodies are never logged.\n- `payments/__main__.py` runs `python3 -m payments`\
+  \ with `--host` (127.0.0.1), `--port` (8000) and `--db` (or `$PAYMENTS_DB`, default\
+  \ `payments.db`).\n- `README.md` covers running, the calls, the refusals, idempotency,\
+  \ the test cards and the card-data rule.\n- `tests/test_service.py` (32 tests) and\
+  \ `tests/test_api.py` (27 tests) cover:\n  - every outcome and every refusal, including\
+  \ the refusal order;\n  - replay and key reuse;\n  - concurrent double submits,\
+  \ which charge once;\n  - routing, CORS and preflight;\n  - paging;\n  - the 500\
+  \ path;\n  - no card number or security code in responses, the sqlite dump or the\
+  \ remembered keys.\n\nChoices where the contract is silent:\n- `order_reference`\
+  \ over 255 characters, an empty or over-255-character Idempotency-Key, an amount\
+  \ above 2^63-1 and a request body over 64 KB are refused. The first, second and\
+  \ fourth are invalid_request (400) and the amount is invalid_amount (422). The alternative\
+  \ was an internal error.\n- A repeated `outcome`, `limit` or `cursor` query parameter\
+  \ is invalid_request.\n- A method `http.server` doesn't handle (for example TRACE)\
+  \ answers 405 method_not_allowed in the standard body.\n- Idempotency keys live\
+  \ in memory only, capped at 10 000 (oldest finished keys dropped first), so a restart\
+  \ forgets them. This is in the README.\n\nOutside my files:\n- `.gitignore` doesn't\
+  \ cover `payments.db`, the default database file, so running the server from the\
+  \ repo root would leave an untracked file. Add it to `.gitignore`, or run with `--db`.\n\
+  - `contract.yaml` at the repo root and `.fab0/artifacts/contract.yaml` differ. The\
+  \ artifact is a pointer, so this looks intended. I followed the root `contract.yaml`."
+data:
+  files:
+  - payments/service.py
+  - payments/api.py
+  - payments/__main__.py
+  - tests/test_service.py
+  - tests/test_api.py
+  - README.md
+  tests: 'python3 -m unittest discover -s tests -t . : 128 tests OK'
+started: '2026-10-18T18:24:08Z'
+ended: '2026-10-18T18:29:25Z'
+heads:
+  home: b56b0ab9631f491ae256f3c7ee7574c9cb4c3574
