@@ -1,0 +1,14 @@
+- id: T1
+  title: "Publish the field messages as the reference wording: keep every card-check message in one table in payments/cards.py, by field (cardholder_name, number, expiry, security_code) and code (required, invalid_format, invalid_number, expired, invalid_length), with each brand variant of the security code length message (amex, other brands, brand unknown); list them word for word in docs/field-messages.md, with the rules behind each one, and link it from the README; tests check that every message the service can return is in the table and that the document matches the table exactly (D5)"
+  files:
+    - payments/cards.py
+    - docs/field-messages.md
+    - README.md
+    - tests/test_cards.py
+  depends_on: []
+- id: T2
+  title: "Cross-origin access as a browser uses it: tests send what a browser sends from another origin (Origin header, preflight for POST /payments and GET /orders/{order_reference}/payments with Access-Control-Request-Method and Access-Control-Request-Headers 'content-type,idempotency-key' in any case and order) and check the preflight answer, and that every answer to Pay order and Order payment status (201, 200 replay, 404, 405, 409, 422, 400, 500) carries Access-Control-Allow-Origin and exposes Idempotency-Replayed; fix in payments/api.py whatever falls short of the contract (D1, D9)"
+  files:
+    - payments/api.py
+    - tests/test_api.py
+  depends_on: []
