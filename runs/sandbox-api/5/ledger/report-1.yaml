@@ -1,0 +1,35 @@
+step: report
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/5/report
+model: sonnet
+base:
+  branch: fab0/5/base
+  sha: 215efc26cb61ec251b9527bcdfc23577d5f66a91
+inputs:
+  spec: sha256:3b90cf282e331eb736bd2f4f48f4321c3c39e7604f1e8647ba455b07d870517c
+  tasks: sha256:2022918cefbc49985e335d692f75795e213fbc8e6fe54a665b6100ceba0f7c66
+gate:
+  type: none
+summary: 'Report for the service team (sandbox-api) is written to /Users/zhen/Work/Fab0/sandbox-api/.git/fab0/out/5/report-1/feedback.md,
+  with the sections Delivered, Deviations and Open questions. It covers only the service-side
+  parts of D1, D5, D9 and D12. The full suite on branch fab0/5/report passes: 156
+  tests, which I ran myself. T1: all 13 card-check messages are in one table, FIELD_MESSAGES
+  in payments/cards.py, with docs/field-messages.md, a README link, contract.yaml
+  and tests that keep document and table equal. T2: browser-style CORS and preflight
+  tests were added in tests/test_api.py. The service already met the contract, so
+  the only code change is one small fix in payments/api.py, which now answers an unparseable
+  request line as HTTP/1.0 with the CORS headers. Deviations: the cross-origin code
+  needed no change beyond that fix, and the preflight always returns a fixed header
+  list instead of echoing the requested one. Open questions: no browser has called
+  the service in this team''s work. D1 (page loads without a console error) and D9
+  (checkout reads Idempotency-Replayed) are settled only by the web team''s browser
+  run. Any difference in name rules between the checkout and the service should go
+  in the web team''s run record.'
+outputs:
+  feedback: sha256:f8c6c45feb058ac13901d296023ccad74e90be9818afde6764e36187046c1508
+verify:
+  feedback: pass
+started: '2026-10-19T14:42:52Z'
+ended: '2026-10-19T14:44:09Z'
