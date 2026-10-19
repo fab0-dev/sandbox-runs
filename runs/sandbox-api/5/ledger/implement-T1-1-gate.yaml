@@ -1,0 +1,75 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/5/implement-T1
+base:
+  branch: fab0/5/base
+  sha: df3244ee6bb9761c43fc0fd0a280065fa9ff2500
+unit: T1
+model: opus
+gate:
+  type: auto
+  merge: auto
+  into: fab0/5/base
+  agent: reviewer
+  decision: approve
+summary: 'The change touches exactly the four files T1 names: payments/cards.py, docs/field-messages.md,
+  README.md and tests/test_cards.py.; All 13 card-check messages now live in one table,
+  FIELD_MESSAGES in payments/cards.py, keyed by (field, code, variant). The security
+  code length message has its three brand variants (amex, other_brands, brand_unknown).
+  Every check in validate_card takes its text from that table through field_error().
+  No FieldError is built anywhere else in payments/ (service.py only maps the errors
+  to response bodies).; The texts and rules match the field_messages operation in
+  contract.yaml word for word, including the brand rule and the ''not in the table''
+  note. No message text and no rule changed, so this stays within the spec''s Out
+  of scope (''Changing the card rules themselves'').; docs/field-messages.md lists
+  the table word for word, with a rule for each row. README links it from the validation_failed
+  row and from a new ''Field messages'' section.; The tests check what the task asks.
+  Every message validate_card returns over a broad product of inputs is in the table,
+  under the matching field and code. Every message in the table can be returned. The
+  document''s table equals FIELD_MESSAGES exactly and in order.; python3 -m unittest
+  discover -s tests -t . in the T1 worktree: 138 tests, OK. tests.test_cards passed
+  on 3 repeat runs.'
+verdict:
+  decision: approve
+  reasons:
+  - 'The change touches exactly the four files T1 names: payments/cards.py, docs/field-messages.md,
+    README.md and tests/test_cards.py.'
+  - All 13 card-check messages now live in one table, FIELD_MESSAGES in payments/cards.py,
+    keyed by (field, code, variant). The security code length message has its three
+    brand variants (amex, other_brands, brand_unknown). Every check in validate_card
+    takes its text from that table through field_error(). No FieldError is built anywhere
+    else in payments/ (service.py only maps the errors to response bodies).
+  - The texts and rules match the field_messages operation in contract.yaml word for
+    word, including the brand rule and the 'not in the table' note. No message text
+    and no rule changed, so this stays within the spec's Out of scope ('Changing the
+    card rules themselves').
+  - docs/field-messages.md lists the table word for word, with a rule for each row.
+    README links it from the validation_failed row and from a new 'Field messages'
+    section.
+  - The tests check what the task asks. Every message validate_card returns over a
+    broad product of inputs is in the table, under the matching field and code. Every
+    message in the table can be returned. The document's table equals FIELD_MESSAGES
+    exactly and in order.
+  - 'python3 -m unittest discover -s tests -t . in the T1 worktree: 138 tests, OK.
+    tests.test_cards passed on 3 repeat runs.'
+  findings:
+  - check: tests
+    message: test_messages_equal_the_contract_texts compares only one message with
+      the contract; nothing checks the table against contract.yaml's messages list
+      automatically. The texts match today, but a later change to the contract alone
+      would not be caught (not required by T1).
+    location: tests/test_cards.py:321
+  - check: tests
+    message: The tests call validate_card directly and do not check the texts through
+      POST /payments. That is acceptable, because service._field_body passes the message
+      through unchanged.
+    location: tests/test_cards.py:296
+  details:
+    worktree: /Users/zhen/Work/Fab0/sandbox-api/.git/fab0/worktrees/5/implement-T1
+    diff: git -C /Users/zhen/Work/Fab0/sandbox-api diff origin/fab0/5/base...fab0/5/implement-T1
+    test_command: python3 -m unittest discover -s tests -t .
+    test_result: Ran 138 tests, OK
+started: '2026-10-19T14:39:09Z'
+ended: '2026-10-19T14:42:09Z'
