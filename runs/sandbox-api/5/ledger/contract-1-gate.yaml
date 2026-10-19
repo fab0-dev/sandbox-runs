@@ -1,0 +1,81 @@
+step: contract
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/5/contract
+base:
+  branch: fab0/5/base
+  sha: dd7b8e546fd4bf20f4e0f9caacd0cd40a6ae409b
+model: opus
+gate:
+  type: auto
+  merge: auto
+  into: fab0/5/base
+  agent: reviewer
+  decision: approve
+summary: 'The contract covers both service-side interfaces the spec asks for, and
+  implements nothing. Only contract.yaml changed (git diff --name-only origin/fab0/5/base...fab0/5/contract).;
+  The cross_origin operation covers the spec''s Cross-origin access interface (D1,
+  D9) and T2''s cases. It defines a 204 preflight on /payments and /orders/{order_reference}/payments
+  that ignores Access-Control-Request-Method and Access-Control-Request-Headers, so
+  any case or order of header names works. Every status T2 lists (201, 200 replay,
+  400, 404, 405, 409, 422, 500) carries Allow-Origin * and Expose-Headers Idempotency-Replayed,
+  and there are no credentials. This matches payments/api.py exactly (CORS_HEADERS
+  and PREFLIGHT_HEADERS at lines 43-51, the OPTIONS branch at lines 145-147), so the
+  producer''s statement that today''s code already complies is true.; The field_messages
+  operation covers the spec''s Field messages interface (D5) and T1. All 13 messages
+  match payments/cards.py word for word, checked against _check_name, _check_number,
+  _check_expiry and _check_security_code. Each states its field, code and rule, gives
+  the three brand variants of the security_code invalid_length message, and states
+  the brand rule exactly as detect_brand implements it. It names docs/field-messages.md,
+  which T1 is to create, as the published copy.; The notes follow spec open questions
+  1 and 2: the service''s wording is the reference, and rule differences go in the
+  web team''s run record. Nothing out of scope (new outcomes, authentication, rule
+  changes) is added.; contract.yaml parses as YAML with operations and notes, and
+  the existing suite passes (python3 -m unittest in the worktree: 128 tests OK).'
+verdict:
+  decision: approve
+  reasons:
+  - The contract covers both service-side interfaces the spec asks for, and implements
+    nothing. Only contract.yaml changed (git diff --name-only origin/fab0/5/base...fab0/5/contract).
+  - The cross_origin operation covers the spec's Cross-origin access interface (D1,
+    D9) and T2's cases. It defines a 204 preflight on /payments and /orders/{order_reference}/payments
+    that ignores Access-Control-Request-Method and Access-Control-Request-Headers,
+    so any case or order of header names works. Every status T2 lists (201, 200 replay,
+    400, 404, 405, 409, 422, 500) carries Allow-Origin * and Expose-Headers Idempotency-Replayed,
+    and there are no credentials. This matches payments/api.py exactly (CORS_HEADERS
+    and PREFLIGHT_HEADERS at lines 43-51, the OPTIONS branch at lines 145-147), so
+    the producer's statement that today's code already complies is true.
+  - The field_messages operation covers the spec's Field messages interface (D5) and
+    T1. All 13 messages match payments/cards.py word for word, checked against _check_name,
+    _check_number, _check_expiry and _check_security_code. Each states its field,
+    code and rule, gives the three brand variants of the security_code invalid_length
+    message, and states the brand rule exactly as detect_brand implements it. It names
+    docs/field-messages.md, which T1 is to create, as the published copy.
+  - 'The notes follow spec open questions 1 and 2: the service''s wording is the reference,
+    and rule differences go in the web team''s run record. Nothing out of scope (new
+    outcomes, authentication, rule changes) is added.'
+  - 'contract.yaml parses as YAML with operations and notes, and the existing suite
+    passes (python3 -m unittest in the worktree: 128 tests OK).'
+  findings:
+  - check: accuracy
+    message: In the visa/mastercard/discover/unknown row, 'unknown' is described as
+      'a number that passes the check but starts like no known brand', but a number
+      that fails the check digit and has an unknown prefix also gets the 3-digit text.
+      The brand_rule paragraph says this correctly, so the row is only imprecise.
+    location: contract.yaml:198
+  - check: accuracy
+    message: The number/required rule says 'empty after removing spaces and dashes',
+      but the code also strips other whitespace (normalize_number(raw).strip()), so
+      a tab-only number is also 'required'; T1's document could state the rule exactly.
+    location: contract.yaml:189
+  details:
+    files_changed:
+    - contract.yaml
+    tests_run: cd /Users/zhen/Work/Fab0/sandbox-api/.git/fab0/worktrees/5/contract
+      && python3 -m unittest -q -> Ran 128 tests, OK
+    not_checked: No contract JSON schema found under /Users/zhen/Work/Fab0/sandbox-api/.fab0/schemas
+      (only scope.json and tasks.json), so no schema validation was run here; the
+      handout says the contract check passed.
+started: '2026-10-19T14:27:43Z'
+ended: '2026-10-19T14:29:26Z'
