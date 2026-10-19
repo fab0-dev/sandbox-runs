@@ -1,0 +1,84 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/5/implement-T1
+unit: T1
+model: sonnet
+base:
+  branch: fab0/5/base
+  sha: df3244ee6bb9761c43fc0fd0a280065fa9ff2500
+inputs:
+  spec: sha256:3b90cf282e331eb736bd2f4f48f4321c3c39e7604f1e8647ba455b07d870517c
+  tasks: sha256:2022918cefbc49985e335d692f75795e213fbc8e6fe54a665b6100ceba0f7c66
+  unit: sha256:a09a8b6bd6d585b6849b185792ee75b6a860d7a0e1d0e21395fab6f67a79178e
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+claims:
+- home:payments/cards.py
+- home:docs/field-messages.md
+- home:README.md
+- home:tests/test_cards.py
+gate:
+  type: auto
+summary: 'T1 is done. All 13 card-check messages now sit in one table, `FIELD_MESSAGES`
+  in payments/cards.py, and `validate_card` takes its texts only from it. `docs/field-messages.md`
+  lists them word for word with the rules, and the README links it. The full suite
+  passes (138 tests, 10 of them new). I also broke one word in the document on purpose,
+  and the document test failed as it should. No message text changed, so the existing
+  API and service tests still pass.
+
+
+  The table is keyed by (field, code, variant). The variant is None except for the
+  security code length message, which has three: `amex`, `other_brands` (visa, mastercard,
+  discover, or a number that passes the check but starts like no known brand) and
+  `brand_unknown` (number missing or malformed). A small helper, `field_error(field,
+  code, variant=None)`, builds a FieldError from the table. The texts and rules match
+  the `messages` list in contract.yaml.
+
+
+  The document has a Messages table with the columns Field, Code, Brand, Message and
+  Rule. Messages are in backticks, which the test strips before comparing. It also
+  has a section on the brand rule and a note on what is not in the table (the `validation_failed`
+  summary sentence and decline messages). The README gained a short "Field messages"
+  section and a link from the `validation_failed` row.
+
+
+  The new tests in tests/test_cards.py check these things:
+
+  - The table covers exactly the field and code pairs and the three variants, in field
+  order, with distinct plain texts.
+
+  - Every message that `validate_card` returns is in the table. This runs over a product
+  of about 9x14x11x9 inputs for name, number, expiry and security code.
+
+  - Every table message can be returned by some input.
+
+  - The security code variant follows the brand.
+
+  - The document''s table equals `FIELD_MESSAGES` exactly (field, code, brand, message,
+  in order), and every row has a rule.
+
+  - The README links the document, and no quoted sentence in the document is outside
+  the table.
+
+
+  I could not check a few things:
+
+  - The tests call `validate_card` directly. They do not go through the HTTP layer,
+  which only maps `FieldError` to `{field, code, message}`.
+
+  - The web checkout is not touched.
+
+
+  Nothing outside my files looked wrong.'
+data:
+  files_changed:
+  - payments/cards.py
+  - docs/field-messages.md
+  - README.md
+  - tests/test_cards.py
+  tests: 'python3 -m unittest discover -s tests -t . : 138 tests, OK'
+started: '2026-10-19T14:35:10Z'
+ended: '2026-10-19T14:38:38Z'
+heads:
+  home: 6ecfc11cdf10df9a2a727801cff881c71183925c
