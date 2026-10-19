@@ -1,0 +1,75 @@
+step: plan
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/5/plan
+model: opus
+base:
+  branch: fab0/5/base
+  sha: 98d20114063613b185c5a6d33b3a8a113dbb6bd5
+inputs:
+  spec: sha256:3b90cf282e331eb736bd2f4f48f4321c3c39e7604f1e8647ba455b07d870517c
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+gate:
+  type: human
+summary: 'Wrote /Users/zhen/Work/Fab0/sandbox-web/.git/fab0/out/5/plan-1/tasks.yaml
+  and /Users/zhen/Work/Fab0/sandbox-web/.git/fab0/out/5/plan-1/scope.yaml. Scope:
+  contract: false. The checkout offers no calls to other teams. Cross-origin access
+  and the field messages are changes to the service''s contract, which the service
+  team writes; its run-5 plan already has contract: true for them.
+
+
+  There are three tasks.
+
+  - T1: the checkout''s own messages are replaced with the service''s published field
+  messages, word for word. This includes choosing the security code message by brand
+  the way the service does (amex, other brands, brand unknown). Tests check the texts
+  match. Covers D4 and D5.
+
+  - T2: a Playwright script, e2e/checkout-run.mjs, run with `npm run e2e`. It goes
+  through D1 to D10 in one desktop Chromium, with the checkout served as the README
+  says, against the running service. It also covers fixing whatever the run shows
+  is wrong on the checkout side, with a unit test for each fix. Depends on T1 because
+  both change tests/checkout.test.js.
+
+  - T3: a final run against the service''s current main, started fresh, after all
+  fixes on both sides. The written record goes in docs/e2e-run.md, linked from the
+  README, and `npm test` is confirmed to still pass. Covers D11 and D12.
+
+
+  Choices I made:
+
+  1. The browser is driven by a kept Playwright script, not by hand. The spec''s open
+  question 4 welcomes this, and it lets an agent repeat the run. It adds a playwright
+  devDependency in package.json. The script is kept out of `npm test` and out of CI,
+  since CI is out of scope.
+
+  2. The service''s wording is the reference (open question 1). Where the rules differ
+  (open question 2), the checkout is loosened only where it refuses details the service
+  accepts. All other rule differences are written in the run record and left for a
+  later Story.
+
+  3. D9 is shown from the checkout''s origin by sending Pay order twice with the same
+  key from the page context, as open question 5 reads it.
+
+  4. The service must be started fresh (empty store) before the final run, so that
+  D10''s ''nothing else was recorded'' can be checked. Any service fault still open
+  is named in the record as blocking.
+
+
+  Risk the developer should know about: the previous Story''s checkout is not on main
+  here. main and origin/main (98d2011) hold only README.md. The checkout files (src/card-validation.js,
+  src/payments-api.js, src/config.js, src/checkout.js, checkout.html, index.html,
+  styles.css, tests/*, package.json) exist only on run 3''s branches (fab0/3/report
+  and fab0/3/base). Run 3 is still waiting on its report ack, and its sync-base and
+  pr.ready steps are blocked. fab0/5/base is main. Run 3 must be merged into main,
+  or this run''s base moved onto it, before T1 starts. Otherwise there is no checkout
+  to fix. The file paths in this plan are taken from run 3''s task returns.'
+outputs:
+  tasks: sha256:6c239b0b06ccfd9005288b81323fd115a6c9ea73e7467c81274a742cf36b3374
+  scope: sha256:f26a924aab59db92e1b1b1591094b26e1df3a12290fdb9f2154b67262cd6c96f
+verify:
+  tasks: pass
+  scope: pass
+started: '2026-10-19T14:25:15Z'
+ended: '2026-10-19T14:27:13Z'
