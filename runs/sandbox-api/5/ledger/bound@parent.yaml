@@ -1,0 +1,20 @@
+parent:
+  project: sandbox-home
+  run: '5'
+  unit: service
+  item: fab0-dev/sandbox-home#5
+bindings:
+  spec: spec
+formats:
+  contract:
+    artifact: contract
+    schema: sha256:79228292922e878e4f54b0ea3dbeb137c566ecf9bc1946e724e25ad324d35571
+  feedback:
+    artifact: service-feedback
+    sections:
+    - Delivered
+    - Deviations
+    - Open questions
+acknowledge: auto
+actor: eugenefurs
+at: '2026-10-19T14:20:06Z'
