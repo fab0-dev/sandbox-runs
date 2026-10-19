@@ -1,0 +1,28 @@
+export:
+  project: sandbox-api
+  run: '5'
+  name: export@contract-1+contract
+decision: accepted
+findings:
+- 'Several references still use the previous Story''s numbering, so in this Story''s
+  spec they point at the wrong thing. ''A new key after a decline is a new attempt
+  (D5)'' and the declined notes'' ''(D5)'' mean retry after decline, which is D6 here;
+  D5 here is about matching messages. ''Double submit (D7)'' is D8 here. test_cards
+  says ''(D11)'', which here is the run record. In the notes, ''Payment provider (spec
+  open question 1)'', ''Amount (open question 2)'' and ''Shop access (open question
+  3)'' clash with this spec''s open questions 1 to 3, and field_messages already uses
+  ''spec open question 1'' correctly for ''whose wording wins''. Renumber them or
+  mark them as references to the previous Story. (contract: pay_order.request.headers.Idempotency-Key,
+  pay_order.response.declined.notes, test_cards.summary, notes (Payment provider,
+  Amount, Shop access, Double submit))'
+- 'cross_origin.response.preflight lists Access-Control-Expose-Headers on the preflight
+  answer. Browsers ignore it there and only use it on the actual response, which the
+  contract also covers. It does no harm, but the note could say that only the actual-response
+  header matters to the checkout. (contract: cross_origin.response.preflight.headers)'
+- 'field_messages does not say which code wins when one field has several mistakes.
+  The ''when'' clauses and cards.py imply required, then invalid_format, then invalid_number,
+  expired or invalid_length. For example, a security code ''12a'' gets invalid_format,
+  not invalid_length. Stating that order would help the checkout match the service
+  exactly when a field has two mistakes at once. (contract: field_messages.response.messages)'
+actor: eugenefurs
+at: '2026-10-19T14:34:04Z'
