@@ -1,0 +1,75 @@
+step: plan
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/5/plan
+model: opus
+base:
+  branch: fab0/5/base
+  sha: dd7b8e546fd4bf20f4e0f9caacd0cd40a6ae409b
+inputs:
+  spec: sha256:3b90cf282e331eb736bd2f4f48f4321c3c39e7604f1e8647ba455b07d870517c
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+gate:
+  type: human
+summary: 'The service side (sandbox-api) has two parallel tasks under a contract (contract:
+  true). The spec''s Interfaces have this service offer the checkout two things: cross-origin
+  access and the reference field messages. Both are written as changes to contract.yaml,
+  which the web team builds against.
+
+
+  What the code already does: payments/api.py sends ''Access-Control-Allow-Origin:
+  *'' and ''Access-Control-Expose-Headers: Idempotency-Replayed'' on every response.
+  It answers OPTIONS preflights with 204 and allows the Content-Type and Idempotency-Key
+  headers. That matches the contract notes. So the cross-origin work is about proving
+  it works the way a browser calls it, and fixing any gap that shows up. It is not
+  about building it.
+
+
+  The field messages are not published anywhere yet. Also, contract.yaml''s example
+  field message (''Enter the 16-digit number from the front of your card.'') is a
+  text the service never returns, so the contract step should replace it with the
+  real list.
+
+
+  T1, publish the field messages (D5): gather every card-check message into one table
+  in payments/cards.py, keyed by field and code. Give each variant of the security-code
+  length message: amex (4 digits), other brands (3 digits) and brand unknown (3 or
+  4 digits). List them word for word in a new docs/field-messages.md, with the rule
+  behind each one, and link it from the README. Tests check that the document matches
+  the table exactly and that every message validate_card can return is in it.
+
+
+  T2, browser-style cross-origin tests (D1, D9): tests send what a browser sends from
+  another origin. That covers the Origin header and preflights for POST /payments
+  and GET /orders/{ref}/payments, with request headers in any case and order. They
+  check that every answer status (201, 200 replay, 400, 404, 405, 409, 422, 500) allows
+  the origin and exposes Idempotency-Replayed. payments/api.py is fixed only if something
+  falls short. The two tasks share no files.
+
+
+  Choices I made:
+
+  - The service''s current texts are the reference wording (open question 1). No message
+  text changes unless the web team asks.
+
+  - The rules that only the service checks go in docs/field-messages.md, so the web
+  team can list them in its run record (open question 2). These are the 100-character
+  name limit, control characters in the name and the 12 to 19 digit number length.
+  The card rules themselves stay as they are.
+
+  - docs/test-cards.md is left alone unless the run shows it is wrong.
+
+  - The browser run itself belongs to the web team (open question 3). If it finds
+  a service fault, that comes back here as rework.'
+data:
+  tasks_file: /Users/zhen/Work/Fab0/sandbox-api/.git/fab0/out/5/plan-1/tasks.yaml
+  scope_file: /Users/zhen/Work/Fab0/sandbox-api/.git/fab0/out/5/plan-1/scope.yaml
+outputs:
+  tasks: sha256:2022918cefbc49985e335d692f75795e213fbc8e6fe54a665b6100ceba0f7c66
+  scope: sha256:2f9fe77d8d5516c0bffe27a859f30f6376ba7ee6cf2b94e14a85a8ca895529af
+verify:
+  tasks: pass
+  scope: pass
+started: '2026-10-19T14:20:32Z'
+ended: '2026-10-19T14:22:00Z'
