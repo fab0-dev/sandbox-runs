@@ -1,0 +1,25 @@
+- id: T1
+  title: "Use the service's field messages as the checkout's own: take every message validateCard returns word for word from the service's published field messages (docs/field-messages.md / contract), by field (cardholder_name, number, expiry, security_code) and code (required, invalid_format, invalid_number, invalid_length, expired), with the security code message chosen by brand the way the service chooses it (amex, other brands, brand unknown); where the checkout refuses details the service would accept, loosen the checkout's rule to match the service; list in the PR every rule one side checks and the other doesn't, for the run record; tests assert each message equals the service's text (D4, D5)"
+  files:
+    - src/card-validation.js
+    - tests/card-validation.test.js
+    - tests/checkout.test.js
+  depends_on: []
+- id: T2
+  title: "Browser run against the running service, and the checkout-side fixes it needs: a Playwright script (e2e/checkout-run.mjs, run with `npm run e2e`, not part of `npm test`) that serves the checkout as the README says, opens it in one desktop Chromium against the service at its documented address, fails on any console or cross-origin error, and goes through D1 to D10: each card in docs/test-cards.md on a new order (paid with amount, currency, brand and last four; or the decline message word for word for all five reasons), the four invalid inputs with no attempt in the lookup, a decline then a success on the same page, an already-paid order on open and in a second tab, double click and double Enter giving one attempt, a same-key Pay order sent twice from the checkout's origin reading Idempotency-Replayed with the same result, and List payments (all, succeeded, declined) and per-order lookups matching exactly the attempts made with no full number or security code; fix in the checkout whatever the run shows is wrong on its side (for example reading Idempotency-Replayed or answers the client mis-reads), with a unit test for each fix (D1-D10, D12)"
+  files:
+    - e2e/checkout-run.mjs
+    - package.json
+    - src/payments-api.js
+    - src/checkout.js
+    - src/config.js
+    - checkout.html
+    - tests/payments-api.test.js
+    - tests/checkout.test.js
+  depends_on: [T1]
+- id: T3
+  title: "Final run and its written record: with the service started fresh from its repository's current main by its documented command and the checkout served as its README says, run the whole browser run again after all fixes on both sides, and write docs/e2e-run.md: how both were started (commands, ports, commits), each case D1 to D10 with the card or input used and the result seen, the replay check, every fault found with the side and fix that closed it, any service fault still open (the Story is not done while one is), and the rule differences between checkout and service that are left for later; link it from the README and confirm `npm test` still passes (D11, D12)"
+  files:
+    - docs/e2e-run.md
+    - README.md
+  depends_on: [T1, T2]

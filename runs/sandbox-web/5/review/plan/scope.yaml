@@ -1,0 +1,2 @@
+contract: false
+why: "The spec's Interfaces add no calls offered by the checkout; it only consumes the service's Pay order, Order payment status, List payments, cross-origin access and field messages, whose contract the service team writes."
