@@ -1,0 +1,67 @@
+step: requirements
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/5/requirements
+model: opus
+base:
+  branch: main
+  sha: a2c67388c59a239beb9e76c2db59be9547a29ab3
+inputs:
+  feature: sha256:9df75e18964eef3a5e030500da6631cff240d834e3ab122ac50a5e1b2557bed5
+  story: sha256:2df91f0d0df1fcf321281a3dab666e153111688a61bc6cdb1ad4f51fab1a3640
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+gate:
+  type: human
+summary: 'Wrote the spec to /Users/zhen/Work/Fab0/sandbox-home/.git/fab0/out/5/requirements-1/spec.md.
+  The Story is to pay an order by card in a real browser, using the checkout page
+  against the running service.
+
+
+  The Intent explains why this Story is needed: the previous Story built and tested
+  the two halves only separately.
+
+
+  Scope:
+
+  - In: every test card in docs/test-cards.md, invalid card details, retry after a
+  decline, an order that is already paid, a double click, checking the shop''s list
+  and per-order lookup, fixing cross-origin calls and the Idempotency-Replayed header,
+  and making the checkout''s field messages match the service''s.
+
+  - Out: new payment behaviour, a shop screen, authentication, and changing the card
+  rules.
+
+
+  There are 12 checkable Done when statements (D1 to D12). D3 requires each decline
+  message to match the test-cards document word for word. D5 requires one wording
+  per field and mistake, including the security code message that depends on the card
+  brand. D11 requires a written run record that a person can repeat. D12 requires
+  every fault found to be fixed in the repository where it lies.
+
+
+  The spec adds no new calls. It names two interfaces the service offers the checkout:
+  Cross-origin access, which includes exposing the Idempotency-Replayed header, and
+  Field messages, which is the reference wording for each field and code.
+
+
+  Open questions, each with the reading I chose:
+
+  1. The service''s messages are the reference wording.
+
+  2. Where the two sides check different rules, the difference is listed in the run
+  record. It is fixed now only if the checkout refuses card details the service would
+  accept.
+
+  3. The web team runs the browser, against the service''s main branch.
+
+  4. A written, repeatable run record is enough; automation is welcome but not required.
+
+  5. A replay is tested by sending the same request twice with the same key from the
+  checkout''s origin.'
+outputs:
+  spec: sha256:3b90cf282e331eb736bd2f4f48f4321c3c39e7604f1e8647ba455b07d870517c
+verify:
+  spec: pass
+started: '2026-10-19T14:12:00Z'
+ended: '2026-10-19T14:13:38Z'
