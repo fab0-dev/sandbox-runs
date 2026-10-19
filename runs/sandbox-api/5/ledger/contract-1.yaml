@@ -1,0 +1,63 @@
+step: contract
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/5/contract
+model: sonnet
+base:
+  branch: fab0/5/base
+  sha: dd7b8e546fd4bf20f4e0f9caacd0cd40a6ae409b
+inputs:
+  spec: sha256:3b90cf282e331eb736bd2f4f48f4321c3c39e7604f1e8647ba455b07d870517c
+  tasks: sha256:2022918cefbc49985e335d692f75795e213fbc8e6fe54a665b6100ceba0f7c66
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+claims:
+- home:contract.yaml
+gate:
+  type: auto
+summary: "I wrote the contract at contract.yaml. I started from the repository's existing\
+  \ contract.yaml and kept pay_order, order_payment_status, list_payments and test_cards.\
+  \ The file parses as YAML and has the required top-level `operations` and `notes`.\
+  \ I implemented nothing and did not check the file against the JSON schema or run\
+  \ the tests.\n\nTwo operations are new:\n- `cross_origin` covers D1 and D9. The\
+  \ preflight on /payments and /orders/{order_reference}/payments answers 204 with\
+  \ an empty body. Its headers are Allow-Origin `*`, Allow-Methods `GET, POST, OPTIONS`,\
+  \ Allow-Headers `Content-Type, Idempotency-Key`, Expose-Headers `Idempotency-Replayed`\
+  \ and Max-Age 600. The preflight never looks at Access-Control-Request-Method or\
+  \ Access-Control-Request-Headers, so any case or order of the header names works.\
+  \ It is never a 4xx on those two paths. Every real answer carries Allow-Origin `*`\
+  \ and Expose-Headers `Idempotency-Replayed`. That covers 201, 200 replay, 404, 405,\
+  \ 409, 422, 400 and 500. `Idempotency-Replayed: true` appears only on a 200 replay\
+  \ of Pay order. There are no credentials.\n- `field_messages` covers D5. It lists\
+  \ all 13 messages word for word, as they stand in payments/cards.py, with the rule\
+  \ behind each one. The fields are cardholder_name, number, expiry and security_code.\
+  \ The codes are required, invalid_format, invalid_number, expired and invalid_length.\
+  \ The security_code `invalid_length` message has three variants:\n  - visa, mastercard,\
+  \ discover or unknown prefix: \"Enter the 3-digit security code from the back of\
+  \ your card.\"\n  - amex: \"Enter the 4-digit security code from the front of your\
+  \ American Express card.\"\n  - brand not known (number missing or malformed): \"\
+  The security code has 3 or 4 digits.\"\n\n  The operation also states the brand\
+  \ rule and that no other message appears in `error.fields`. It names docs/field-messages.md\
+  \ as where the table is published. T1 must create that file, and T1 must keep the\
+  \ table in payments/cards.py with a test that the document matches it.\n\nI also\
+  \ changed the existing text. The validation_failed `fields[].message` now says it\
+  \ is always one of the field_messages texts. The Idempotency-Key note now points\
+  \ to `cross_origin`. The `cors` note is rewritten to match. I added a `field_messages`\
+  \ note and a `Delivery` note for T1 and T2. The Delivery note says the current api.py\
+  \ already sends these headers, so T2 is expected to confirm that. The code is fixed\
+  \ wherever it differs from the contract.\n\nThese are choices I made where the spec\
+  \ left room, and the notes record each one:\n- The service's wording is the reference,\
+  \ as in spec open question 1.\n- Rule differences between the checkout and the service\
+  \ are not fixed here. The service refuses control characters in the name and names\
+  \ over 100 characters, for example. The web team records them in its run record,\
+  \ as in open question 2.\n- Allow-Origin stays `*` with no credentials, because\
+  \ this Story has no authentication.\n\nThe repository's root contract.yaml is unchanged.\
+  \ I put the new contract only in the worktree path I was given."
+outputs:
+  contract: sha256:2dc85e5c9d616007c989c742c5f237fa08c4783ca88be4395c823a29059f01ac
+verify:
+  contract: pass
+started: '2026-10-19T14:25:22Z'
+ended: '2026-10-19T14:27:25Z'
+heads:
+  home: 3cffa7fb1daab2e457c207510b7908110120e821
