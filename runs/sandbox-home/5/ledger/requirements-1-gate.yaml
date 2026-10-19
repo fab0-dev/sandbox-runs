@@ -1,0 +1,17 @@
+step: requirements
+attempt: 1
+executor: person
+actor: eugenefurs
+branch: fab0/sandbox-home/5/requirements
+base:
+  branch: main
+  sha: a2c67388c59a239beb9e76c2db59be9547a29ab3
+started: '2026-10-19T14:17:13Z'
+ended: '2026-10-19T14:17:13Z'
+gate:
+  type: human
+  decision: approve
+  review:
+    pull: fab0-dev/sandbox-runs#5
+    commit: 1b6c458e3d18212e2fd697ff465b656ba47a9a3a
+summary: approved by eugenefurs in fab0-dev/sandbox-runs#5

@@ -1,0 +1,21 @@
+factory: service
+pipeline: delivery
+unit: service
+item: fab0-dev/sandbox-api#13
+project: sandbox-api
+run: '5'
+bindings:
+  spec: spec
+formats:
+  contract:
+    artifact: contract
+    schema: sha256:79228292922e878e4f54b0ea3dbeb137c566ecf9bc1946e724e25ad324d35571
+  feedback:
+    artifact: service-feedback
+    sections:
+    - Delivered
+    - Deviations
+    - Open questions
+acknowledge: auto
+actor: eugenefurs
+at: '2026-10-19T14:17:22Z'
