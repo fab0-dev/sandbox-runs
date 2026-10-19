@@ -1,0 +1,18 @@
+parent:
+  project: sandbox-home
+  run: '5'
+  unit: web
+  item: fab0-dev/sandbox-home#5
+bindings:
+  spec: spec
+  upstream: contract
+formats:
+  feedback:
+    artifact: web-feedback
+    sections:
+    - Delivered
+    - Deviations
+    - Open questions
+acknowledge: auto
+actor: eugenefurs
+at: '2026-10-19T14:24:51Z'
