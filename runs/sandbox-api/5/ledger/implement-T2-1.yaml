@@ -1,0 +1,78 @@
+step: implement
+attempt: 1
+executor: agent
+actor: eugenefurs
+branch: fab0/5/implement-T2
+unit: T2
+model: sonnet
+base:
+  branch: fab0/5/base
+  sha: df3244ee6bb9761c43fc0fd0a280065fa9ff2500
+inputs:
+  spec: sha256:3b90cf282e331eb736bd2f4f48f4321c3c39e7604f1e8647ba455b07d870517c
+  tasks: sha256:2022918cefbc49985e335d692f75795e213fbc8e6fe54a665b6100ceba0f7c66
+  unit: sha256:d52e10884274c3777febe05aec288cf1ff48296faf67482c9cacfe02b36af35f
+  reviews: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+claims:
+- home:payments/api.py
+- home:tests/test_api.py
+gate:
+  type: auto
+summary: 'T2 is done. The service already met the cross_origin contract for every
+  case a browser produces, so the only code change is one small fix in payments/api.py.
+  The full suite passes (146 tests, 18 of them new), stable over 3 repeat runs.
+
+
+  Tests: I added a CrossOriginApiTest class to tests/test_api.py that sends what a
+  browser sends from another origin. It sets an Origin header and then runs the preflight,
+  the real request and the replay.
+
+  - Preflight: it covers POST /payments and GET /orders/{ref}/payments. Requested
+  headers are tried in any case, order and spacing, including ''content-type,idempotency-key''.
+  It also covers missing or odd Access-Control-Request-Method values, several origins
+  including ''null'', a body or query on the preflight, repeated preflights on one
+  connection, and an unknown path (404). Each answer must be an empty 204 with exactly
+  one each of Allow-Origin ''*'', Allow-Methods ''GET, POST, OPTIONS'', Allow-Headers
+  ''Content-Type, Idempotency-Key'', Max-Age 600 and Expose-Headers ''Idempotency-Replayed'',
+  and no Allow-Credentials. A browser-style check confirms the requested method and
+  headers are covered. A preflight records and charges nothing.
+
+  - Real requests: every answer to Pay order carries Access-Control-Allow-Origin and
+  Access-Control-Expose-Headers exactly once, with no Allow-Credentials. Statuses
+  covered: 201, 200 replay, 409, 422 (fields, amount, key reused), 400 (bad JSON,
+  bad shape, body too large), 405, 404 and 500. Idempotency-Replayed is ''true'' only
+  on the 200 replay and absent everywhere else.
+
+  - Order payment status: it is covered in the same way for 200 (paid and unknown
+  order), 405, 404 and 500 (a store that raises). List payments and its 400 are covered
+  too, as is a request without an Origin header.
+
+  - Replay and exchange: the replay header can be read through the exposed-headers
+  list and the replayed body equals the first one. One attempt is recorded, and the
+  full exchange of preflight, POST, replay and GET works.
+
+
+  Fix in payments/api.py: a request line http.server could not parse (for example
+  ''GET /payments HTTP/x.y'') got an answer with no status line and no headers. That
+  is an HTTP/0.9-style reply with no CORS headers, because http.server leaves request_version
+  at HTTP/0.9. send_error now switches to HTTP/1.0 in that case, so these errors are
+  normal JSON 400s with the CORS headers. A browser never sends such a request, and
+  the test ''test_errors_found_by_the_server_itself_carry_the_headers'' failed before
+  the fix. That test also covers a 431 header-too-large answer.
+
+
+  Nothing else fell short of the contract.
+
+
+  Not mine: during a manual raw-socket probe, http.server printed ''Exception occurred
+  during processing of request'' to stderr, probably from my probe closing connections
+  with unread data. It has no effect on responses and is not in the test suite.'
+data:
+  files_changed:
+  - payments/api.py
+  - tests/test_api.py
+  tests: 'python3 -m unittest discover -s tests -t . : 146 tests OK (3 runs)'
+started: '2026-10-19T14:35:13Z'
+ended: '2026-10-19T14:38:43Z'
+heads:
+  home: ab2f43f3335937ca9fb75c073ba6fc009b6b0df8
