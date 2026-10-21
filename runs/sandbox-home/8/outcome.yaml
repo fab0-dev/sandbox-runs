@@ -1,0 +1,31 @@
+feature: done
+summary: >-
+  Every "Done when" statement of the refund Story is shown by a team's report. The service
+  (243 tests pass on the merged branch) reports D1 to D12. The shop can refund a succeeded
+  payment in full with a reason, and gets the payment back with its refund: amount, currency,
+  reason and time. A missing or blank reason, an unknown payment, a declined payment and a
+  second refund are each refused with their own code and a plain-words message, and nothing
+  changes. Two refunds at the same time give exactly one success. Order payment status now says
+  unpaid, paid or refunded and gives the refund's time. List payments shows the refund in the
+  payment's usual place, and narrowing by outcome gives the same payments as before. Paying a
+  refunded order is refused as order_refunded and records no attempt. No refund answer, refusal
+  or stored row holds card data. docs/refunds.md describes each case, and its commands were run
+  against a live service. The web checkout (120 tests pass) reports D13 to D17. A refunded order
+  opens as refunded, with the date in the customer's local time, and shows no card form. Paying
+  from a stale page shows the service's message and then the refunded state, and records no
+  attempt. Unpaid and paid orders behave as before. Both cases were shown in Chromium against the
+  running service, started from its repository at the service commit the service team reports
+  (3c5293a), with no fake API. docs/e2e-run.md records the refund calls, the orders and the cards
+  used. Both suites keep the earlier Stories' cases passing, and neither team found a mismatch
+  with the contract. The Feature's goal is met: customers pay by card and see the result, and the
+  shop sees each payment's outcome, now including a refund.
+  Small points noted and not followed up. A stale checkout that resends a successful submit with
+  the same Idempotency-Key after a refund gets the old success replayed. The contract documents
+  this, and a reload shows the order as refunded. The service's HTTP server takes about 5
+  simultaneous connections. That is a server setting, not a refund rule, and D7 is proven at the
+  service level. The browser run used Chromium only, with a fixed time zone. Also not followed up,
+  because the spec put them out of scope or left them to later Stories: partial refunds and
+  refunds asked for by the customer, a back-office screen, a real payment provider, showing the
+  shop's reason to the customer, and authentication. The authentication Story should cover Refund
+  payment first.
+follow-ups: []
