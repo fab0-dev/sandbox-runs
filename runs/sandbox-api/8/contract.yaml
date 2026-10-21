@@ -45,19 +45,16 @@ operations:
               brand: "one of visa, mastercard, amex, discover, unknown"
               last4: "string, four digits. The only part of the card number ever returned."
             created_at: "string, ISO 8601 in UTC with a trailing Z, for example 2026-10-18T14:03:22Z"
-            refund: &refund
-              description: >-
-                Always present, on every payment the service returns (pay_order, order_payment_status,
-                list_payments, refund_payment). null when the payment was not refunded, which is
-                always the case for a declined payment and for a payment just made. An object when
-                it was refunded. The refund never changes outcome, decline_reason, message, card,
-                created_at or the payment's place in a list.
-              null_when_not_refunded: "null"
-              when_refunded:
-                amount: "integer, minor units. Always the payment's own amount."
-                currency: "string. Always the payment's own currency."
-                reason: "string, the shop's reason, exactly as given."
-                refunded_at: "string, ISO 8601 in UTC with a trailing Z, like created_at. The time of the refund."
+            refund: >-
+              Always present, on every payment the service returns (pay_order, order_payment_status,
+              list_payments, refund_payment). It is either null or an object. null when the payment
+              was not refunded, which is always the case for a declined payment and for a payment
+              just made. Otherwise the object {amount, currency, reason, refunded_at}, where amount
+              is an integer in minor units and always the payment's own amount, currency is a string
+              and always the payment's own currency, reason is a string, the shop's reason exactly as
+              given, and refunded_at is a string, ISO 8601 in UTC with a trailing Z like created_at,
+              the time of the refund. These four are the only members of the object. The refund never
+              changes outcome, decline_reason, message, card, created_at or the payment's place in a list.
           order_paid: "boolean. true when this attempt succeeded."
       declined:
         http: "201 Created (200 OK when replayed by Idempotency-Key)"
@@ -69,8 +66,9 @@ operations:
         description: >-
           No payment was tried and nothing was recorded. All refusals share one body shape,
           { "error": { "code", "message", ... } }. "message" is plain words the checkout can
-          show. Two optional members exist: "fields", present only for validation_failed, and
-          "order_reference", present only for order_already_paid. A refusal is never replayed
+          show. Three optional members exist: "fields", present only for validation_failed,
+          "order_reference", present only for order_already_paid and order_refunded, and
+          "refunded_at", present only for order_refunded. A refusal is never replayed
           or remembered under an Idempotency-Key. When more than one refusal applies, the first
           in this order is returned: invalid_request, invalid_amount, validation_failed,
           idempotency_key_reused, order_refunded, order_already_paid. (A refunded order also has
@@ -389,7 +387,7 @@ notes: |
   - Distinguishing the three answers: succeeded and declined are HTTP 201 (200 on idempotent replay) and carry a "payment" with an "outcome". Refused is a 4xx with an "error" and no "payment". The checkout reads the "outcome" for the first two and "error.code" for the third.
   - Double submit (D7): the service serialises attempts per order, so two simultaneous requests for one order run one after the other. If the first succeeds, the second is refused with order_already_paid. If the first is declined, the second is a separate attempt unless it carries the same Idempotency-Key, in which case it gets the first answer. The checkout must also disable its submit button while a request is open and should send an Idempotency-Key.
   - Decline messages shown as is: card_declined "Your card was declined. Try another card."; insufficient_funds "Your card has insufficient funds. Try another card."; expired_card "Your card has expired. Check the expiry date or use another card."; incorrect_card_details "Some of your card details are incorrect. Check them and try again."; processing_error "We could not process the payment right now. Please try again." The wording is final unless the service team changes it; the checkout must show `message` and not hard-code it, and should key any styling on `decline_reason`.
-  - Validation timing: validation and the already-paid check happen before any attempt. Refusals follow one fixed order, see "refused" under pay_order: invalid_request, invalid_amount, validation_failed, idempotency_key_reused, order_already_paid. A refusal is not recorded and not replayed for a repeated Idempotency-Key.
+  - Validation timing: validation and the refunded and already-paid checks happen before any attempt. Refusals follow one fixed order, see "refused" under pay_order: invalid_request, invalid_amount, validation_failed, idempotency_key_reused, order_refunded, order_already_paid. A refusal is not recorded and not replayed for a repeated Idempotency-Key.
   - Ordering: lists are newest first by created_at; attempts with the same time are ordered by the later one first.
   - Unknown paths return 404 (code not_found). On a known path, a method other than the ones listed for it and OPTIONS returns 405 (code method_not_allowed), with an `Allow` header. Both use the standard error body. OPTIONS on a known path is a CORS preflight and is never a 405.
   - List paging (list_payments): paging by `limit` and `cursor` is the way to reach older payments; there is no total count. order_payment_status is deliberately not paged.
