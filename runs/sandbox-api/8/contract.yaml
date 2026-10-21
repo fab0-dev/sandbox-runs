@@ -1,0 +1,413 @@
+operations:
+  - name: pay_order
+    summary: >-
+      Pay one order by card, for the amount given, in one attempt. Called by the web checkout.
+      A decline is a normal answer (HTTP 201 with outcome "declined"), not an error. A refused
+      request (invalid card, bad amount, order already paid, order refunded) tries no payment and records no attempt.
+    request:
+      http: "POST /payments"
+      content_type: application/json
+      headers:
+        Idempotency-Key: >-
+          Optional string, 1 to 255 characters. The checkout should send a fresh key for each
+          submit of the form and reuse it when it resends the same submit (retry after a network
+          failure, double click). A repeated key with the same body returns the first answer
+          without a new attempt and with the header "Idempotency-Replayed: true". A repeated key
+          with a different body is refused (see "idempotency_key_reused"). A new key after a
+          decline is a new attempt (D5). Only succeeded and declined answers are remembered under
+          a key; a refusal is not, so a repeated key after a refusal is judged afresh.
+          Browsers on another origin can send this header and the preflight allows it; the
+          response header "Idempotency-Replayed" is readable from script (see the "cross_origin"
+          operation).
+      body:
+        order_reference: "string, required, non-empty. Opaque to the service."
+        amount: "integer, required, minor units (cents) of the currency, greater than 0. Example: 2599 is 25.99."
+        currency: "string, required, ISO 4217 code in upper case, three letters. Example: USD."
+        card:
+          cardholder_name: "string, required, non-blank, at most 100 characters"
+          number: "string, required, 12 to 19 digits; spaces and dashes are ignored; must pass the Luhn check"
+          expiry_month: "integer, required, 1 to 12"
+          expiry_year: "integer, required, four digits (2026) or two digits (26, meaning 2026)"
+          security_code: "string, required, digits only, 3 digits, or 4 digits for American Express cards"
+    response:
+      succeeded:
+        http: "201 Created (200 OK when replayed by Idempotency-Key)"
+        body:
+          payment: &payment
+            payment_reference: "string, for example pay_8f3a1c. Unique."
+            order_reference: "string, as sent"
+            amount: "integer, minor units, as sent"
+            currency: "string, as sent"
+            outcome: "'succeeded' or 'declined'"
+            decline_reason: "string or null. null when succeeded. One of card_declined, insufficient_funds, expired_card, incorrect_card_details, processing_error when declined."
+            message: "string. For declined, a plain-words message the checkout shows to the customer as is. For succeeded, a short confirmation."
+            card:
+              brand: "one of visa, mastercard, amex, discover, unknown"
+              last4: "string, four digits. The only part of the card number ever returned."
+            created_at: "string, ISO 8601 in UTC with a trailing Z, for example 2026-10-18T14:03:22Z"
+            refund: &refund
+              description: >-
+                Always present, on every payment the service returns (pay_order, order_payment_status,
+                list_payments, refund_payment). null when the payment was not refunded, which is
+                always the case for a declined payment and for a payment just made. An object when
+                it was refunded. The refund never changes outcome, decline_reason, message, card,
+                created_at or the payment's place in a list.
+              null_when_not_refunded: "null"
+              when_refunded:
+                amount: "integer, minor units. Always the payment's own amount."
+                currency: "string. Always the payment's own currency."
+                reason: "string, the shop's reason, exactly as given."
+                refunded_at: "string, ISO 8601 in UTC with a trailing Z, like created_at. The time of the refund."
+          order_paid: "boolean. true when this attempt succeeded."
+      declined:
+        http: "201 Created (200 OK when replayed by Idempotency-Key)"
+        body:
+          payment: "same shape as above, with outcome 'declined', a decline_reason and a message"
+          order_paid: false
+        notes: "The order stays unpaid and the checkout may submit again with a new Idempotency-Key (D5)."
+      refused:
+        description: >-
+          No payment was tried and nothing was recorded. All refusals share one body shape,
+          { "error": { "code", "message", ... } }. "message" is plain words the checkout can
+          show. Two optional members exist: "fields", present only for validation_failed, and
+          "order_reference", present only for order_already_paid. A refusal is never replayed
+          or remembered under an Idempotency-Key. When more than one refusal applies, the first
+          in this order is returned: invalid_request, invalid_amount, validation_failed,
+          idempotency_key_reused, order_refunded, order_already_paid. (A refunded order also has
+          a succeeded payment, so order_refunded is checked before order_already_paid and wins.
+          A repeated key with the same body is replayed before the refunded and already-paid
+          checks, so a replay of a success is a 200, not a 409, even if the order was refunded
+          since. A replay returns the first answer as it was given: its payment may show
+          refund null although the payment was refunded afterwards. Read order_payment_status
+          for the current state.)
+        validation_failed:
+          http: "422 Unprocessable Entity"
+          body:
+            error:
+              code: validation_failed
+              message: "string"
+              fields:
+                - field: "one of cardholder_name, number, expiry, security_code. 'expiry' covers both expiry_month and expiry_year. All invalid fields are listed, in that order."
+                  code: "one of required, invalid_format, invalid_number (fails the check digit), expired, invalid_length (security code of the wrong length for the brand)"
+                  message: "string, plain words for the customer. Always one of the texts in the field_messages operation, word for word."
+        invalid_amount:
+          http: "422 Unprocessable Entity"
+          body:
+            error: {code: invalid_amount, message: "string, amount is missing, not an integer or not greater than 0"}
+        invalid_request:
+          http: "400 Bad Request"
+          body:
+            error: {code: invalid_request, message: "string, body is not valid JSON, is not an object, or order_reference or currency is missing or malformed"}
+        order_already_paid:
+          http: "409 Conflict"
+          body:
+            error:
+              code: order_already_paid
+              message: "string, plain words, for example 'This order has already been paid.'"
+              order_reference: "string"
+        idempotency_key_reused:
+          http: "422 Unprocessable Entity"
+          body:
+            error: {code: idempotency_key_reused, message: "string, the key was used for a different request"}
+        order_refunded:
+          description: >-
+            New. The order has a succeeded payment that was refunded. The order is final: it is
+            not paid again (spec open question 3), so a second checkout tab or a stale page cannot
+            charge it again. No payment is tried and no attempt is recorded, whatever the card,
+            the amount or the key. The message is for the customer and the checkout shows it as is.
+            The checkout can show the date from error.refunded_at, or read order_payment_status.
+          http: "409 Conflict"
+          body:
+            error:
+              code: order_refunded
+              message: "string, plain words for the customer, fixed text: 'This order was refunded, so it cannot be paid again.'"
+              order_reference: "string"
+              refunded_at: "string, ISO 8601 in UTC with a trailing Z, the time of the refund"
+      other_errors:
+        http: "500 Internal Server Error with the same error body shape, code internal_error. No guarantee about whether an attempt was recorded; the checkout should read order_payment_status before it submits again."
+
+  - name: order_payment_status
+    summary: >-
+      Tell whether an order is unpaid, paid or refunded and list its payment attempts, newest
+      first. Called by the web checkout and by the shop.
+    request:
+      http: "GET /orders/{order_reference}/payments"
+      path:
+        order_reference: "string, URL-encoded"
+    response:
+      ok:
+        http: "200 OK. An order with no attempts is answered as status 'unpaid', paid false, refunded_at null and an empty list, not as an error."
+        body:
+          order_reference: "string"
+          status: >-
+            New, and the member the checkout keys on. One of 'unpaid' (no attempt succeeded, or no
+            attempt at all), 'paid' (an attempt succeeded and was not refunded), 'refunded' (the
+            succeeded attempt was refunded).
+          paid: >-
+            boolean. Kept for existing readers. true only when status is 'paid'. It is false for
+            a refunded order: the money went back, so the order is not paid (spec open question 8).
+            A reader that only knows 'paid' therefore treats a refunded order as not paid and may
+            offer the card form; paying is then refused with order_refunded and nothing is
+            charged. Readers should use status.
+          refunded_at: "string or null. New. The time of the refund (UTC, ISO 8601 with a trailing Z, equal to the refund's refunded_at on the succeeded payment) when status is 'refunded'. null otherwise. The checkout shows its date."
+          payments: "array of payment (shape as in pay_order, each with its refund), newest first by created_at, ties broken by the later attempt first. Empty when none. Not paged, on purpose: one order has few attempts. The refund of a refunded order is shown on its succeeded payment in this array."
+      errors:
+        http: "500 with the standard error body"
+
+  - name: refund_payment
+    summary: >-
+      New. Refund one succeeded payment in full, with the shop's reason. Called by the shop (not
+      by the checkout). The whole amount goes back in the payment's currency, in one go, in test
+      mode: no money moves, and an allowed refund always succeeds (spec open question 5). A payment
+      is refunded at most once; a second request, also a simultaneous one, is refused. A refused
+      request changes nothing. There is no Idempotency-Key for this call: repeating a request
+      after it succeeded is refused as payment_already_refunded, which tells the caller it went
+      through.
+    request:
+      http: "POST /payments/{payment_reference}/refund"
+      content_type: application/json
+      path:
+        payment_reference: "string, URL-encoded. The payment_reference of a payment, as found in pay_order, order_payment_status or list_payments."
+      body:
+        reason: >-
+          string, required, not blank (not empty, not only whitespace), at most 500 characters.
+          Plain text from the shop, kept and shown exactly as given (not trimmed or rewritten).
+          For example "Out of stock" or "Customer cancelled".
+      notes: >-
+        A request with no body at all (zero length) is a request without a reason
+        (reason_required). A body that is present but is not valid JSON or not a JSON object is
+        invalid_request.
+    response:
+      succeeded:
+        http: "200 OK"
+        body:
+          payment: >-
+            The payment, shaped as in pay_order, now with refund set to the object
+            {amount, currency, reason, refunded_at}: amount and currency equal to the payment's own,
+            reason as given, refunded_at the time of the refund (UTC, ISO 8601 with a trailing Z).
+            outcome stays 'succeeded' and decline_reason stays null.
+        notes: >-
+          The body has "payment" and no "error"; a refusal has "error" and no "payment", and is
+          a 4xx. So a success is always told apart from a refusal. After it, order_payment_status
+          for the payment's order says status 'refunded' and gives the same refunded_at.
+      refused:
+        description: >-
+          Nothing was changed and nothing was recorded. Same body shape as every refusal,
+          { "error": { "code", "message", ... } }, with the optional members named below. Each
+          refusal has its own code. When more than one applies, the first in this order is
+          returned: invalid_request, reason_required, reason_too_long, payment_not_found,
+          payment_declined, payment_already_refunded. The messages are plain words for the shop
+          and are fixed texts; the codes are what a caller keys on.
+        invalid_request:
+          http: "400 Bad Request"
+          body:
+            error: {code: invalid_request, message: "string, the body is present but is not valid JSON or is not a JSON object, or is too large"}
+        reason_required:
+          http: "422 Unprocessable Entity"
+          body:
+            error: {code: reason_required, message: "Give the reason for the refund."}
+          when: "the reason is missing, null, not a text, empty, or only whitespace; also when there is no body at all"
+        reason_too_long:
+          http: "422 Unprocessable Entity"
+          body:
+            error: {code: reason_too_long, message: "The reason can be at most 500 characters."}
+        payment_not_found:
+          http: "404 Not Found"
+          body:
+            error: {code: payment_not_found, message: "There is no payment with this reference.", payment_reference: "string, as sent"}
+          notes: "Not the same as the not_found code of an unknown path (that one means the URL has no route)."
+        payment_declined:
+          http: "409 Conflict"
+          body:
+            error: {code: payment_declined, message: "This payment was declined, so it took no money and there is nothing to refund.", payment_reference: "string"}
+        payment_already_refunded:
+          http: "409 Conflict"
+          body:
+            error:
+              code: payment_already_refunded
+              message: "string, says when, for example 'This payment was already refunded at 2026-10-18T14:03:22Z.'"
+              payment_reference: "string"
+              refunded_at: "string, ISO 8601 in UTC with a trailing Z. The time of the first refund, which stays as it was."
+      other_errors:
+        http: "500 Internal Server Error with the same error body shape, code internal_error. Read the payment through order_payment_status or list_payments to see whether the refund was recorded."
+      concurrency: >-
+        When two or more refund requests for the same payment arrive at the same time, exactly one
+        succeeds (200) and each other one is refused with payment_already_refunded, giving the
+        time of the one that succeeded. Refunds and payments for the same order do not
+        interleave: a pay_order for that order and a refund of its payment run one after the
+        other.
+
+  - name: list_payments
+    summary: >-
+      List recorded payments across all orders, newest first, optionally narrowed to one outcome.
+      Called by the shop.
+    request:
+      http: "GET /payments"
+      query:
+        outcome: "optional, 'succeeded' or 'declined'. Omit for all."
+        limit: "optional integer, 1 to 500, default 100. Page size."
+        cursor: "optional opaque string, the next_cursor of the previous page. Omit for the first (newest) page."
+    response:
+      ok:
+        http: "200 OK"
+        body:
+          payments: "array of payment (shape as in pay_order, each with its refund), newest first, at most `limit`. Empty when none. A refund changes neither a payment's place in the list nor which payments an `outcome` narrowing returns: refunded payments are still 'succeeded'."
+          next_cursor: "string or null. Send it as `cursor` to get the next older page. null when there are no older payments. Paging runs back through every recorded payment, so the shop can reach the oldest."
+      refused:
+        http: "400 Bad Request"
+        body:
+          error: {code: invalid_request, message: "string, outcome is not 'succeeded' or 'declined', limit is out of range, or cursor is not one this service issued"}
+
+  - name: cross_origin
+    summary: >-
+      Cross-origin access, offered to the web checkout, which runs in a browser on another origin
+      (another host or port) than the service. Applies to pay_order and order_payment_status,
+      including their new answers (status and refunded_at, order_refunded), and in the same way
+      to list_payments, refund_payment and every error answer. It changes no body and no status.
+      refund_payment is called by the shop, not by the checkout, but its answers carry the same
+      headers so that nothing on this service is an exception.
+    request:
+      http: "OPTIONS /payments, OPTIONS /orders/{order_reference}/payments and OPTIONS /payments/{payment_reference}/refund (preflight)"
+      headers:
+        Origin: "any origin; not checked"
+        Access-Control-Request-Method: "POST for /payments and for /payments/{payment_reference}/refund, GET for /orders/{order_reference}/payments (not checked: any value, or none, gets the same answer)"
+        Access-Control-Request-Headers: "for example 'content-type,idempotency-key', in any case and any order, with or without spaces (not checked: the answer always lists the allowed headers)"
+      body: "none expected; ignored if present"
+    response:
+      preflight:
+        http: "204 No Content, empty body"
+        headers:
+          Access-Control-Allow-Origin: "*"
+          Access-Control-Allow-Methods: "GET, POST, OPTIONS"
+          Access-Control-Allow-Headers: "Content-Type, Idempotency-Key"
+          Access-Control-Max-Age: "600"
+          Access-Control-Expose-Headers: "Idempotency-Replayed"
+        notes: "Never 405, never 4xx, on these three paths. The answer has no Access-Control-Allow-Credentials: the checkout sends no cookies and no credentials. A preflight on an unknown path is 404 not_found, with Access-Control-Allow-Origin: * as every answer."
+      actual_request:
+        description: >-
+          Every answer to a real request, whatever its status, carries these headers: 201
+          and 200 (replay) from pay_order, 200 and 500 from order_payment_status, 200 from
+          refund_payment, and the error answers 400, 404, 405, 409, 422 and 500 (including
+          order_refunded, reason_required, reason_too_long, payment_not_found, payment_declined
+          and payment_already_refunded).
+        headers:
+          Access-Control-Allow-Origin: "*"
+          Access-Control-Expose-Headers: "Idempotency-Replayed"
+          Idempotency-Replayed: "'true' on a 200 replay of pay_order, absent on every other answer. Script on the checkout's origin can read it because it is exposed."
+      note_for_the_checkout: >-
+        A POST with Content-Type application/json and an Idempotency-Key header is not a simple
+        request, so the browser sends the preflight first; both succeed as described. Do not
+        send credentials (keep the default fetch credentials mode, "same-origin"), because the allowed origin is "*".
+
+  - name: refund_documentation
+    summary: >-
+      New. Documentation, not a call: how to refund a payment, kept in docs/refunds.md of the
+      service repository beside docs/test-cards.md and linked from the README (D12). It lets a
+      person repeat each of D1 to D5 and D10 on purpose against the running service with the
+      test cards.
+    request:
+      kind: documentation
+      path: docs/refunds.md
+    response:
+      contents:
+        - "How to refund: the request (POST /payments/{payment_reference}/refund, JSON body with reason), the reason rules (required, not blank, at most 500 characters, kept as given) and the answer (200 with the payment and its refund)."
+        - "Each refusal with its HTTP status, code and message: reason_required, reason_too_long, payment_not_found, payment_declined, payment_already_refunded, and order_refunded from pay_order. Also invalid_request."
+        - "Step-by-step commands with the test cards (docs/test-cards.md) to repeat on purpose: a refund (D1), a missing or blank reason (D2), an unknown payment (D3), a declined payment (D4), a second refund (D5), and paying a refunded order (D10)."
+        - "How the refund shows in order_payment_status (status 'refunded', refunded_at) and in list_payments."
+      kept_equal_by: "A test in the service repository checks that every refund-related code the service can return appears in the document."
+
+  - name: field_messages
+    summary: >-
+      Documentation, not a call: the reference wording of the card-check messages. The
+      checkout shows these same texts, word for word, for the same field and the same mistake.
+      The service returns exactly one of these texts as "message" of each entry of
+      error.fields in a validation_failed refusal. The same table is kept in payments/cards.py
+      and listed in docs/field-messages.md of the service repository, linked from the README;
+      a test checks that the document matches the table.
+    request:
+      kind: documentation
+      path: docs/field-messages.md
+    response:
+      field_order: "cardholder_name, number, expiry, security_code. A refusal lists every invalid field, in that order, one entry per field."
+      messages:
+        - {field: cardholder_name, code: required, message: "Enter the name on the card.", when: "missing, null, or blank (only spaces)"}
+        - {field: cardholder_name, code: invalid_format, message: "Enter the name on the card, up to 100 characters.", when: "not a string, longer than 100 characters after trimming, or contains a control character"}
+        - {field: number, code: required, message: "Enter your card number.", when: "missing, null, or empty after removing spaces and dashes"}
+        - {field: number, code: invalid_format, message: "Enter the card number using digits only, 12 to 19 of them. Spaces and dashes are fine.", when: "not a string, contains anything but digits, spaces and dashes, or has fewer than 12 or more than 19 digits"}
+        - {field: number, code: invalid_number, message: "This card number is not valid. Check it and try again.", when: "12 to 19 digits that fail the check digit (Luhn)"}
+        - {field: expiry, code: required, message: "Enter the expiry date, month and year.", when: "expiry_month or expiry_year missing or null"}
+        - {field: expiry, code: invalid_format, message: "Enter a valid expiry date, month 1 to 12 and a year such as 2030.", when: "month or year not an integer, month outside 1 to 12, or year neither two digits (0 to 99, meaning 2000 to 2099) nor four digits"}
+        - {field: expiry, code: expired, message: "This card has expired. Check the expiry date or use another card.", when: "the month is before the current month (UTC); the current month is fine"}
+        - {field: security_code, code: required, message: "Enter the security code from your card.", when: "missing, null or empty"}
+        - {field: security_code, code: invalid_format, message: "The security code has digits only.", when: "not a string or contains anything but digits"}
+        - {field: security_code, code: invalid_length, brand: "visa, mastercard, discover, unknown (a number that passes the check but starts like no known brand)", message: "Enter the 3-digit security code from the back of your card.", when: "not exactly 3 digits"}
+        - {field: security_code, code: invalid_length, brand: amex, message: "Enter the 4-digit security code from the front of your American Express card.", when: "not exactly 4 digits"}
+        - {field: security_code, code: invalid_length, brand: "not known because the number is missing or malformed (number code required or invalid_format)", message: "The security code has 3 or 4 digits.", when: "not 3 or 4 digits"}
+      brand_rule: >-
+        The brand for the security code message comes from the leading digits of the number: 4 is
+        visa, 34 and 37 are amex, 51 to 55 and 2221 to 2720 are mastercard, 6011, 65, 644 to 649
+        and 622126 to 622925 are discover, anything else is unknown. A number that fails the check
+        digit still has a brand (code invalid_number). Only a missing or malformed number leaves
+        the brand not known, and then the "3 or 4 digits" text is used.
+      not_in_the_table: >-
+        No other message is returned in error.fields. The refusal's own "message" under
+        validation_failed is a summary sentence and is not a field message. Decline messages
+        (decline_reason) are unchanged and are not part of this table.
+
+  - name: test_cards
+    summary: >-
+      Documentation, not a call: the test card details that produce each outcome, kept in
+      docs/test-cards.md of the service repository (D11). The service runs in test mode only and no money moves.
+    request:
+      kind: documentation
+      path: docs/test-cards.md
+    response:
+      test_mode_rule: >-
+        Card numbers below give the outcome shown for any valid cardholder name, any expiry that
+        is not in the past and any security code of the right length (3 digits; 4 for amex).
+        Any other number that passes the Luhn check is approved (succeeded).
+      cards:
+        - {number: "4242424242424242", brand: visa, outcome: succeeded}
+        - {number: "5555555555554444", brand: mastercard, outcome: succeeded}
+        - {number: "4000000000000002", brand: visa, outcome: declined, decline_reason: card_declined}
+        - {number: "4000000000009995", brand: visa, outcome: declined, decline_reason: insufficient_funds}
+        - {number: "4000000000000069", brand: visa, outcome: declined, decline_reason: expired_card}
+        - {number: "4000000000000127", brand: visa, outcome: declined, decline_reason: incorrect_card_details}
+        - {number: "4000000000000119", brand: visa, outcome: declined, decline_reason: processing_error}
+
+notes: |
+  Choices made where the spec left a question open (the run can change them):
+
+  - Transport: a JSON HTTP service, standard library only (the repository is Python 3.12 with no dependencies). Request and response bodies are application/json, UTF-8. The server entry point is `python3 -m payments`. Default base URL: http://127.0.0.1:8000 (host 127.0.0.1, port 8000). The entry point takes `--host` and `--port` to change them, and the README repeats these defaults; the contract is what the web team builds against. The web checkout should keep the base URL in one configurable place. No authentication in this Story.
+  - cors: the web checkout runs in a browser on another origin, so the service answers cross-origin calls, as the cross_origin operation says. Origin policy: any origin is allowed (`Access-Control-Allow-Origin: *`), with no credentials and no cookies, because this Story has no authentication and runs in test mode only. Restricting origins is for the Story that adds authentication. Every response, errors and 404 and 405 included, carries `Access-Control-Allow-Origin: *` and `Access-Control-Expose-Headers: Idempotency-Replayed`. The service answers an `OPTIONS` preflight on `/payments` and `/orders/{order_reference}/payments` with `204 No Content`, an empty body, and `Access-Control-Allow-Origin: *`, `Access-Control-Allow-Methods: GET, POST, OPTIONS`, `Access-Control-Allow-Headers: Content-Type, Idempotency-Key`, `Access-Control-Expose-Headers: Idempotency-Replayed` and `Access-Control-Max-Age: 600`. The preflight does not look at Access-Control-Request-Method or Access-Control-Request-Headers: the list of allowed headers is fixed, and a browser compares header names without regard to case. A browser can therefore send POST /payments with Content-Type application/json and an Idempotency-Key header, and can read the Idempotency-Replayed response header.
+  - field_messages (this Story): the service's wording is the reference (spec open question 1). The checkout adopts the texts in the field_messages operation and does not keep its own. If the web team finds a text unclear, the service changes it in payments/cards.py and docs/field-messages.md, this contract is updated, and both sides use the new text. Where the checkout and the service check different things (for example the service refuses control characters in the name and a name over 100 characters), the rules are not changed in this Story: the table lists the service's rules, and the web team writes any difference in its run record (spec open question 2).
+  - Payment provider (spec open question 1): none. Payments run in test mode and the outcome comes from the card number as in the test_cards operation. A processing_error decline is temporary and the order stays payable.
+  - Amount (open question 2): the caller passes the amount and the service charges it as sent. The service does not check it against an order record. The service does not keep orders; an order is "paid" when one of its attempts succeeded. A different amount or currency for an order that is already paid is still refused as order_already_paid.
+  - Money: amount is an integer in minor units, never a float. Currency is explicit on every payment (open question 4). The service does not check that the currency has two decimal places.
+  - Shop access (open question 3): the shop uses list_payments and order_payment_status. No back-office screen.
+  - Card data (D10): the full card number and the security code are used only inside the pay_order call. They are not stored, logged, returned, listed or echoed in error messages, including validation messages. Only card.brand and card.last4 appear anywhere else. The Idempotency-Key "same body" check keeps one thing derived from the request: a keyed digest (HMAC-SHA-256 with a secret random key held by the service) over order_reference, amount, currency and the card's cardholder name, brand, last four digits and expiry. It is computed without the full card number and without the security code, and the digest is never returned. So two requests that differ only in the middle digits of the card number or in the security code count as the same body.
+  - Distinguishing the three answers: succeeded and declined are HTTP 201 (200 on idempotent replay) and carry a "payment" with an "outcome". Refused is a 4xx with an "error" and no "payment". The checkout reads the "outcome" for the first two and "error.code" for the third.
+  - Double submit (D7): the service serialises attempts per order, so two simultaneous requests for one order run one after the other. If the first succeeds, the second is refused with order_already_paid. If the first is declined, the second is a separate attempt unless it carries the same Idempotency-Key, in which case it gets the first answer. The checkout must also disable its submit button while a request is open and should send an Idempotency-Key.
+  - Decline messages shown as is: card_declined "Your card was declined. Try another card."; insufficient_funds "Your card has insufficient funds. Try another card."; expired_card "Your card has expired. Check the expiry date or use another card."; incorrect_card_details "Some of your card details are incorrect. Check them and try again."; processing_error "We could not process the payment right now. Please try again." The wording is final unless the service team changes it; the checkout must show `message` and not hard-code it, and should key any styling on `decline_reason`.
+  - Validation timing: validation and the already-paid check happen before any attempt. Refusals follow one fixed order, see "refused" under pay_order: invalid_request, invalid_amount, validation_failed, idempotency_key_reused, order_already_paid. A refusal is not recorded and not replayed for a repeated Idempotency-Key.
+  - Ordering: lists are newest first by created_at; attempts with the same time are ordered by the later one first.
+  - Unknown paths return 404 (code not_found). On a known path, a method other than the ones listed for it and OPTIONS returns 405 (code method_not_allowed), with an `Allow` header. Both use the standard error body. OPTIONS on a known path is a CORS preflight and is never a 405.
+  - List paging (list_payments): paging by `limit` and `cursor` is the way to reach older payments; there is no total count. order_payment_status is deliberately not paged.
+
+  Refund (this Story). A change to the contract of the earlier Story: pay_order, order_payment_status and list_payments keep their shape and gain the members named below; refund_payment and refund_documentation are new. Choices made where the spec left a question open (the run can change them):
+
+  - Naming the payment (spec open question 2): refund_payment takes the payment_reference, in the path, not the order. The shop finds it with order_payment_status or list_payments. An order has at most one succeeded payment, so this is the same as refunding the order.
+  - What "unpaid" means (open question 1): a payment reference that does not exist is payment_not_found (404), a declined payment is payment_declined (409). An order with no succeeded payment has nothing to refund.
+  - Route and answer: POST /payments/{payment_reference}/refund, body {"reason": "..."}. A success is 200 with {"payment": {...}} (the payment, with its refund). There is no Idempotency-Key. The call is not repeated safely: a repeat after a success is payment_already_refunded with the first refund's time, and the first refund stays as it was.
+  - The refund member of a payment: present on every payment, in every answer that carries a payment. null when not refunded, else {amount, currency, reason, refunded_at}. It is an addition: existing readers that ignore unknown members keep working. outcome stays 'succeeded', decline_reason, message, created_at and the position in lists do not change. list_payments narrowing by outcome gives the same payments before and after a refund; there is no filter on refunds (out of scope).
+  - Reason (open question 4): plain text, required, not blank, at most 500 characters, kept exactly as given. No reason codes. A reason over the limit is refused as reason_too_long. The reason is for the shop: order_payment_status exposes it only inside the payment's refund, and the checkout is not meant to show it (open question 6).
+  - Refund time: refunded_at is UTC with a trailing Z, to the second, like created_at. The checkout converts it to the customer's local date (open question 6); the service does not.
+  - 'paid' after a refund (open question 8): order_payment_status gains status ('unpaid', 'paid' or 'refunded') and refunded_at. The old boolean paid is kept and is true only when status is 'paid', so it is false for a refunded order. A reader that only knows paid thus sees a refunded order as not paid, may offer the card form, and is refused with order_refunded if it pays: nothing is charged. The checkout should switch on status. For an order that is unpaid or paid, the answer is as before plus status 'unpaid' or 'paid' and refunded_at null.
+  - Paying a refunded order (open question 3): refused with order_refunded (409), checked after idempotency_key_reused and before order_already_paid, before any attempt, under the order's lock. Nothing is recorded. The refusal carries order_reference and refunded_at, so the checkout can show the message as is and then the order as refunded with its date (D14) without a second call; it may also read order_payment_status. No way to pay a refunded order again exists in this Story.
+  - Concurrency (D7): the refund and its record run under the same per-order lock as pay_order, and the store allows at most one refund per payment, so two simultaneous refunds give one 200 and one payment_already_refunded. A refund and a payment for the same order run one after the other.
+  - Test mode (open question 5): a refund that is allowed always succeeds. There are no test cards for a failed refund.
+  - No access control (open question 7): refund_payment, like every call, has no authentication in this Story and the service runs in test mode only. This is accepted for now and the authentication Story covers refund_payment first.
+  - Card data (D11): a refund carries no card data. A payment shows only card.brand and card.last4, as before, and refusals, refund and logs hold no full number and no security code.
+  - cross_origin: the allowed methods stay "GET, POST, OPTIONS" and the allowed headers "Content-Type, Idempotency-Key": refund_payment is a POST with Content-Type application/json and needs nothing more. OPTIONS on /payments/{payment_reference}/refund answers the preflight 204 like the other two paths. A method the refund path does not accept is 405 method_not_allowed with Allow: POST, OPTIONS. GET /payments/{payment_reference} still has no route: 404 not_found.
+  - Delivery: the service's tasks for this Story are T1 (the payment store: refund record, at most one per payment, lookup by reference, refund on every payment), T2 (refund_payment, the changed pay_order and order_payment_status, the HTTP route, tests) and T3 (docs/refunds.md, README link, the test that every refund-related code is in the document). The operations above are the contract even where the code differs, and the code is fixed to match.
+  - Refusal codes added: reason_required, reason_too_long (422), payment_not_found (404), payment_declined (409), payment_already_refunded (409), order_refunded (409). All use the standard error body.
