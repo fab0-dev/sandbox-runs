@@ -1,0 +1,27 @@
+- id: T1
+  title: "Payments client reads refunds, building against the service's contract change: getOrderPaymentStatus returns the order's state (unpaid, paid or refunded) and, for a refunded order, the refund's time, taken from the contract's field and falling back on `paid` only as the contract says older readers do; readPayment copies the refund on a payment field by field (refunded or not, amount, currency, reason, time) and still accepts a payment that has no refund on it; payOrder knows the new refusal for a refunded order (the contract's code, for example order_refunded) as kind 'refused' with the service's message as is, and any refund time it carries; answers that do not fit the contract stay 'unexpected_response'; nothing about a card beyond brand and last four is copied (D8, D10, D11); unit tests for each state, a payment with and without a refund, the new refusal, and the old answers unchanged (D15, D17)"
+  files:
+    - src/payments-api.js
+    - tests/payments-api.test.js
+  depends_on: []
+- id: T2
+  title: "Checkout shows a refunded order: a new 'refunded' phase with a panel in checkout.html ('This order was refunded', the refund date, no card form, no Pay button, no way to pay), the date shown as an easy-to-read date in the customer's own time zone (Intl.DateTimeFormat, en-US, long date, the browser's zone; the shop's reason is not shown); on open, a refunded order goes straight to that panel (D13); when Pay order is refused because the order was refunded meanwhile, the page shows the service's message as is and then the refunded panel with the date, taking the time from the refusal or else from a fresh Order payment status read, and showing the panel without a date only when neither gives one (D14); unpaid and paid, unrefunded orders, declines, retries, already paid and the double-submit lock behave as before (D15); unit tests for the logic and the page binding of each case, with the time zone fixed in the test; README describes the refunded state"
+  files:
+    - src/checkout.js
+    - checkout.html
+    - styles.css
+    - tests/checkout.test.js
+    - README.md
+  depends_on: [T1]
+- id: T3
+  title: "Browser run of the refunded state against the running service, and its record: extend the Playwright run (e2e/checkout-run.mjs with `npm run e2e`, created as in the previous Story if it is not in the repository) with the service started from its repository by its documented command and no fake API: pay a new order with a test card from docs/test-cards.md, refund it with the service's Refund payment call as its refund documentation says, open its checkout and see refunded with the date and no form (D13); open a second order's checkout, pay it in another context, refund it, then pay from the first page and see the service's refunded message, then refunded with the date, with no new attempt in the order's lookup (D14); check an unpaid and a paid, unrefunded order as before and no console or cross-origin error (D15); fix in the checkout whatever the run shows is wrong on its side, with a unit test per fix; add to docs/e2e-run.md (the run record from the previous Story, started if absent) how both sides were started (commands, ports, commits), how each refund was made (call, payment reference, reason), the orders and cards used and what was seen, so a person can repeat it, and any service fault still open; link it from the README and confirm `npm test` passes (D16, D17)"
+  files:
+    - e2e/checkout-run.mjs
+    - package.json
+    - docs/e2e-run.md
+    - README.md
+    - src/checkout.js
+    - src/payments-api.js
+    - tests/checkout.test.js
+    - tests/payments-api.test.js
+  depends_on: [T1, T2]

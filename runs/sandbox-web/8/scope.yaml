@@ -1,0 +1,2 @@
+contract: false
+why: "The spec's Interfaces give the web checkout no interface that other teams call; it only consumes the service's Order payment status and Pay order, whose contract change the service team writes."
