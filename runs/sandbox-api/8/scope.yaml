@@ -1,0 +1,2 @@
+contract: true
+why: "The spec's Interfaces have the service offer a new Refund payment call to the shop and change the payment shape, Order payment status and Pay order that the web checkout consumes, written as a change to the service's current contract."
