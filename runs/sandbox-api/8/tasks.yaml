@@ -1,0 +1,21 @@
+- id: T1
+  title: "Keep refunds in the payment store: one refund per payment (amount and currency equal to the payment's own, the shop's reason, refunded_at in UTC) kept in sqlite3 with a constraint that allows at most one refund per payment, recorded atomically so a second or concurrent refund is reported as already refunded with the first refund's time; look up a payment by reference; tell whether an order is refunded and when; every Payment read by order, by list or by reference carries its refund (or none) and as_dict shows it in the contract's shape, while outcome, decline_reason, list order and outcome narrowing stay as they are; no card data beyond brand and last4 (D1, D5, D7, D8, D9, D11)"
+  files:
+    - payments/store.py
+    - tests/test_store.py
+  depends_on: []
+- id: T2
+  title: "Refund payment, and the changed Pay order and Order payment status, per the contract: PaymentService.refund_payment refuses a missing, blank or too long reason, an unknown payment, a declined payment and an already refunded payment (saying when), each with its own code and plain-words message, changing nothing; refunds run under the order's lock so two simultaneous refunds give one success and one already-refunded refusal, and a refund and a payment for the same order do not interleave; pay_order refuses a refunded order with its own code before any attempt, placed in the contract's refusal order beside order_already_paid; order_status reports unpaid, paid or refunded with the refund's time; the new HTTP route for Refund payment with its statuses, the standard error body and the CORS headers on every answer; tests for D1 to D11 and D17 at service and HTTP level, including the concurrent refund and the earlier Stories' cases unchanged"
+  files:
+    - payments/service.py
+    - payments/api.py
+    - tests/test_service.py
+    - tests/test_api.py
+  depends_on: [T1]
+- id: T3
+  title: "Refund documentation beside docs/test-cards.md: docs/refunds.md says how to refund a payment (request, reason rules, answer), lists each refusal with its HTTP status, code and message, and the refused payment of a refunded order, with step-by-step commands using the test cards so a person can repeat D1 to D5 and D10 on purpose against the running service; link it from the README and list the new route there; a test checks that every refund-related code the service can return is in the document (D12)"
+  files:
+    - docs/refunds.md
+    - README.md
+    - tests/test_docs.py
+  depends_on: [T2]
